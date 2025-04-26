@@ -10,7 +10,35 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron": "cross-env NODE_ENV=development electron .",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\""
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
+    "build:electron": "vite build && electron-builder",
+    "build:win": "vite build && electron-builder --win"
+  },
+  "build": {
+    "appId": "com.tuapp.inventario",
+    "productName": "Sistema de Inventario",
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "directories": {
+      "buildResources": "public",
+      "output": "release"
+    },
+    "win": {
+      "target": ["nsis"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "extraResources": [
+      {
+        "from": "database.sqlite",
+        "to": "database.sqlite"
+      }
+    ]
   },
   "dependencies": {
     "pg": "^8.11.3",

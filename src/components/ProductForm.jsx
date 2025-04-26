@@ -8,6 +8,7 @@ import { toast } from 'react-toastify';
 const ProductForm = ({ product, categories, onSave, onCancel }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchStatus, setSearchStatus] = useState('');
   const [searchResult, setSearchResult] = useState(null);
   const descriptionRef = useRef(null);
   const barcodeInputRef = useRef(null);
@@ -56,14 +57,30 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
     
     try {
       setIsSearching(true);
+      setSearchStatus('Iniciando búsqueda...');
       setFormErrors(prev => ({ ...prev, barcode: '' }));
       
-      // Buscar en línea 
-      const onlineProduct = await searchProductByBarcode(formData.barcode);
+      // Buscar en línea con función para actualizar el estado
+      const onlineProduct = await searchProductByBarcode(
+        formData.barcode,
+        (status) => setSearchStatus(status)
+      );
       
       if (onlineProduct) {
         setSearchResult(onlineProduct);
-        toast.success('¡Producto encontrado en línea!');
+        
+        // Verificar si hubo un error en la búsqueda
+        if (onlineProduct.searchFailed) {
+          toast.info('No se encontró información de este producto en las bases de datos.');
+        } 
+        // Si el producto tiene links, mostrar un toast diferente
+        else if (onlineProduct.links && onlineProduct.links.length > 0) {
+          toast.info('Se encontraron referencias en línea');
+        } 
+        // Producto encontrado con éxito
+        else {
+          toast.success('¡Producto encontrado en línea!');
+        }
       } else {
         toast.info('No se encontró información del producto. Por favor, ingrese los datos manualmente.');
       }
@@ -71,8 +88,12 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
     } catch (error) {
       console.error('Error al buscar el producto:', error);
       toast.error('Error al buscar el producto en línea');
+      setSearchStatus('Error en la búsqueda');
     } finally {
-      setIsSearching(false);
+      setTimeout(() => {
+        setIsSearching(false);
+        setSearchStatus('');
+      }, 1000); // Mantener el estado final visible por un momento
     }
   }, [formData.barcode]);
   
@@ -223,14 +244,21 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
                 autoFocus
               />
               {isSearching ? (
-                <button
-                  type="button"
-                  className="barcode-search-btn"
-                  onClick={handleCancelSearch}
-                >
-                  <MdCancel style={{ fontSize: '18px', marginRight: '5px' }} />
-                  Cancelar
-                </button>
+                <div className="search-status">
+                  <div className="spinner"></div>
+                  <span>{searchStatus}</span>
+                  <button
+                    type="button"
+                    className="barcode-cancel-btn"
+                    onClick={() => {
+                      setIsSearching(false);
+                      setSearchStatus('');
+                    }}
+                  >
+                    <MdCancel style={{ fontSize: '18px', marginRight: '5px' }} />
+                    Cancelar
+                  </button>
+                </div>
               ) : (
                 <button
                   type="button"
@@ -331,28 +359,57 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
         {/* Resultado de búsqueda en línea */}
         {searchResult && (
           <div className="search-result">
-            <h3>Producto encontrado en línea:</h3>
-            <div className="product-preview">
-              <p><strong>Nombre:</strong> {searchResult.name}</p>
-              {searchResult.description && (
-                <p><strong>Descripción:</strong> {searchResult.description}</p>
-              )}
+            <div className="search-result-header">
+              <h3>Producto encontrado en línea:</h3>
+              <div className="search-result-actions">
+                <button
+                  type="button"
+                  className="result-action-btn primary"
+                  onClick={handleUseSearchResult}
+                >
+                  Usar esta información
+                </button>
+                <button
+                  type="button"
+                  className="result-action-btn secondary"
+                  onClick={handleCancelSearch}
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
-            <div className="search-actions">
-              <button
-                type="button"
-                className="confirm-button"
-                onClick={handleUseSearchResult}
-              >
-                Usar esta información
-              </button>
-              <button
-                type="button"
-                className="cancel-search-button"
-                onClick={handleCancelSearch}
-              >
-                Cancelar
-              </button>
+            
+            <div className="search-result-content">
+              {searchResult.links && searchResult.links.length > 0 ? (
+                <div className="search-result-links">
+                  <h4>Referencias encontradas:</h4>
+                  <ul>
+                    {searchResult.links.map((link, index) => (
+                      <li key={index}>
+                        <a 
+                          href={link.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                        >
+                          {link.title || `Referencia ${index + 1}`}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <>
+                  <p><strong>Nombre:</strong> {searchResult.name}</p>
+                  {searchResult.isHTML ? (
+                    <p>
+                      <strong>Descripción:</strong> 
+                      <span dangerouslySetInnerHTML={{ __html: searchResult.description }} />
+                    </p>
+                  ) : (
+                    <p><strong>Descripción:</strong> {searchResult.description}</p>
+                  )}
+                </>
+              )}
             </div>
           </div>
         )}

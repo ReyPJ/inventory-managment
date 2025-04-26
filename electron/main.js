@@ -29,6 +29,16 @@ function createWindow() {
       contextIsolation: true,
       sandbox: true,
     },
+    // Configuración adicional para ventana de producción
+    show: false, // No mostrar hasta que esté lista
+    minWidth: 1024,
+    minHeight: 768,
+    title: "Sistema de Inventario",
+  });
+
+  // Mostrar ventana cuando esté lista para evitar parpadeos
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
   });
 
   // En desarrollo, carga desde el servidor de Vite
@@ -101,8 +111,8 @@ function setupIpcHandlers() {
   });
 }
 
-app.whenReady().then(async () => {
-  // Ejecutar migraciones antes de crear la ventana
+// Preparar la base de datos para producción
+async function setupDatabase() {
   try {
     // Crear una instancia para que el script de migración pueda usar queryInterface
     const queryInterface = sequelize.getQueryInterface();
@@ -110,21 +120,32 @@ app.whenReady().then(async () => {
     // Ejecutar la migración para añadir la columna description
     await addDescriptionMigration(queryInterface);
     console.log("✅ Migraciones completadas correctamente");
+
+    await initDatabase();
+    console.log("✅ Base de datos inicializada correctamente");
   } catch (error) {
-    console.error("❌ Error al ejecutar migraciones:", error);
+    console.error("❌ Error al configurar la base de datos:", error);
   }
+}
 
-  await initDatabase();
-
+// Inicializar la aplicación
+app.whenReady().then(async () => {
+  await setupDatabase();
   setupIpcHandlers();
-
   createWindow();
 });
 
+// Manejar cierre de ventanas
 app.on("window-all-closed", function () {
   if (process.platform !== "darwin") app.quit();
 });
 
+// Recrear ventana en macOS cuando se hace clic en el dock
 app.on("activate", function () {
   if (mainWindow === null) createWindow();
+});
+
+// Manejar errores no capturados
+process.on("uncaughtException", (error) => {
+  console.error("Error no capturado:", error);
 });

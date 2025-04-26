@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   getAllProducts, 
   getAllCategories, 
@@ -33,6 +33,14 @@ function App() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [productToConfirm, setProductToConfirm] = useState(null);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [removeQuantity, setRemoveQuantity] = useState(1);
+  const barcodeInputRef = useRef(null);
+  const dropdownRef = useRef(null);
+  const [hasShownWelcome, setHasShownWelcome] = useState(false);
   
   // Cargar datos iniciales
   useEffect(() => {
@@ -121,41 +129,268 @@ function App() {
     
     filterProductsByCategory();
   }, [selectedCategory, searchTerm]);
+
+  // Manejar el formulario de agregar rápido
+  const handleQuickAddForm = () => {
+    setShowQuickAdd(true);
+    setBarcodeInput('');
+    toast.info(
+      <div>
+        <strong>Modo agregar rápido activado</strong>
+        <div className="toast-details">
+          Escanea un código de barras para agregar +1 al inventario
+        </div>
+      </div>, 
+      {
+        icon: "🔍",
+        autoClose: 3000
+      }
+    );
+  };
+
+  // Focus en el input de código de barras cuando se muestra el formulario
+  useEffect(() => {
+    if (showQuickAdd && barcodeInputRef.current) {
+      // Pequeño delay para asegurar que el DOM está listo
+      setTimeout(() => {
+        barcodeInputRef.current.focus();
+      }, 100);
+    }
+  }, [showQuickAdd]);
+
+  // Función para cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowQuickAdd(false);
+      }
+    }
+    
+    // Añadir listener solo cuando el dropdown está visible
+    if (showQuickAdd) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    // Limpieza del listener
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showQuickAdd]);
+
+  // Buscar producto por código de barras, luego, si existe preguntar si quiere agregar 1 al stock
+  // actual del producto (sera un boton de agregado rapido)
+  const handleQuickAdd = async () => {
+    if (!barcodeInput.trim()) {
+      toast.warning('Por favor ingresa un código de barras', {
+        icon: "⚠️",
+        autoClose: 3000
+      });
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const product = await getProductByBarcode(barcodeInput);
+      if (product) {
+        // Mostrar toast de producto encontrado
+        toast.info(
+          <div>
+            <strong>Producto encontrado:</strong> {product.name}
+            <div className="toast-details">
+              Stock actual: {product.stock} unidades
+            </div>
+          </div>, 
+          {
+            icon: "✓",
+            autoClose: 3000
+          }
+        );
+        
+        // Guardamos el producto para confirmación
+        setProductToConfirm(product);
+        setConfirmAction('quickAdd');
+      } else {
+        toast.error(`Producto con código ${barcodeInput} no encontrado`, {
+          icon: "❌",
+          autoClose: 3000
+        });
+      }
+    } catch (error) {
+      console.error('Error al agregar rápido:', error);
+      toast.error('Error al procesar el código de barras', {
+        autoClose: 3000
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   
+  // Agregar la función para completar la acción después de confirmar
+  const handleConfirmAction = async () => {
+    try {
+      if (!productToConfirm) return;
+      
+      setLoading(true);
+      const oldStock = productToConfirm.stock;
+      const newStock = oldStock + 1;
+      
+      // Mostrar un toast claro ANTES de actualizar (para asegurar que se ve)
+      toast.info(
+        <div>
+          <strong>Agregando unidad...</strong>
+          <div className="toast-details">
+            Producto: {productToConfirm.name}
+          </div>
+        </div>,
+        {
+          icon: "⏳",
+          autoClose: 2000
+        }
+      );
+      
+      // Actualizar el producto
+      await updateProduct(productToConfirm.id, { stock: newStock });
+      
+      // Recargar datos
+      await loadData();
+      
+      // Toast de CONFIRMACIÓN después de actualizar
+      setTimeout(() => {
+        toast.success(
+          <div>
+            <strong>¡Producto actualizado con éxito!</strong>
+            <div className="toast-details">
+              Se agregó 1 unidad de {productToConfirm.name}
+              <br />
+              Stock anterior: {oldStock} → Nuevo stock: {newStock}
+            </div>
+          </div>,
+          {
+            icon: "✅",
+            autoClose: 5000
+          }
+        );
+      }, 500);
+      
+      // Limpiar estados
+      setProductToConfirm(null);
+      setConfirmAction(null);
+      setShowQuickAdd(false);
+      setBarcodeInput('');
+    } catch (error) {
+      console.error('Error al actualizar producto:', error);
+      toast.error('Error al actualizar el inventario', {
+        autoClose: 4000
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Agregar la función para cancelar la acción
+  const handleCancelConfirm = () => {
+    toast.info("Operación cancelada", {
+      icon: "❌",
+      autoClose: 2000
+    });
+    setProductToConfirm(null);
+    setConfirmAction(null);
+  };
+
   // Búsqueda por código de barras
   const handleBarcodeSearch = async (e) => {
     const barcode = e.target.value;
+    console.log("Entrada de código:", barcode, "Tecla:", e.key || "cambio");
     setBarcodeInput(barcode);
     
-    // Si es un código completo (generalmente los escáneres terminan con un "Enter")
+    // Mostrar un toast inmediato como feedback al usuario
     if (e.key === 'Enter' && barcode.trim()) {
+      // Toast inmediato para confirmar que se está procesando
+      toast.info(
+        <div>
+          <strong>Buscando código...</strong>
+          <div className="toast-details">
+            Procesando código de barras: {barcode}
+          </div>
+        </div>,
+        {
+          icon: "🔎",
+          autoClose: 2000,
+          position: "top-center"
+        }
+      );
+      
       try {
+        console.log("Iniciando búsqueda de producto con código:", barcode);
         setLoading(true);
         setError(null);
         const product = await getProductByBarcode(barcode);
+        console.log("Resultado de búsqueda:", product ? "Producto encontrado" : "No encontrado");
         
         if (product) {
           // Si encontramos el producto, mostramos solo ese
           setProducts([product]);
-          toast.success(`Producto encontrado: ${product.name}`, {
-            icon: "✅",
-            position: "top-center"
-          });
+          
+          console.log("Mostrando toast de éxito para:", product.name);
+          // Usar setTimeout para asegurar que el toast aparezca
+          setTimeout(() => {
+            toast.success(
+              <div>
+                <strong>Producto encontrado</strong>
+                <div className="toast-details">
+                  {product.name} (Código: {barcode})
+                </div>
+              </div>,
+              {
+                icon: "✅",
+                position: "top-center",
+                autoClose: 3000
+              }
+            );
+          }, 300);
         } else {
-          // Si no hay producto, abrimos formulario para agregar uno nuevo
-          setEditingProduct({ barcode: barcode });
-          setShowProductForm(true);
-          toast.info(`Código ${barcode} no registrado. Crea un nuevo producto.`, {
-            icon: "🆕",
-            autoClose: 5000
-          });
+          console.log("Mostrando toast de producto no encontrado");
+          // Usar setTimeout para asegurar que el toast aparezca
+          setTimeout(() => {
+            toast.info(
+              <div>
+                <strong>Código no registrado</strong>
+                <div className="toast-details">
+                  No se encontró ningún producto con el código {barcode}.<br/>
+                  Puedes agregar un nuevo producto usando el botón "Agregar Producto".
+                </div>
+              </div>,
+              {
+                icon: "🔍",
+                autoClose: 5000
+              }
+            );
+          }, 300);
+          
+          // Cargar todos los productos nuevamente (o mantener la búsqueda actual)
+          if (searchTerm) {
+            await handleSearch();
+          } else {
+            await loadData();
+          }
         }
       } catch (error) {
         console.error('Error buscando por código de barras:', error);
         setError('Error al buscar el código de barras. Por favor, intenta nuevamente.');
-        toast.error(`Error al buscar el código ${barcode}`, {
-          autoClose: false
-        });
+        
+        setTimeout(() => {
+          toast.error(
+            <div>
+              <strong>Error al buscar</strong>
+              <div className="toast-details">
+                No se pudo procesar el código {barcode}
+              </div>
+            </div>,
+            {
+              autoClose: 4000
+            }
+          );
+        }, 300);
       } finally {
         setLoading(false);
       }
@@ -349,6 +584,149 @@ function App() {
     setShowStats(!showStats);
   };
   
+  // Ahora, agregamos el botón de acción para quitar 1 en la tabla
+  // Buscar la parte donde están las acciones de la tabla (botones de Editar, Eliminar, Ver)
+  const handleQuickRemoveInTable = (product) => {
+    if (product.stock <= 0) {
+      toast.warning(`No hay unidades disponibles de ${product.name} para quitar`, {
+        icon: "⚠️",
+        autoClose: 3000
+      });
+      return;
+    }
+    
+    // Establecer estados y mostrar toast
+    setProductToConfirm(product);
+    setRemoveQuantity(1);
+    setShowRemoveConfirm(true);
+    
+    toast.info(`Selecciona cuántas unidades quitar de ${product.name}`, {
+      icon: "🔢",
+      autoClose: 2000
+    });
+  };
+  
+  const handleReduceProductStock = async () => {
+    try {
+      if (!productToConfirm) return;
+      
+      // Toast inicial antes de comenzar la operación
+      toast.info(
+        <div>
+          <strong>Procesando cambio de inventario...</strong>
+          <div className="toast-details">
+            Quitando {removeQuantity} {removeQuantity === 1 ? 'unidad' : 'unidades'} de {productToConfirm.name}
+          </div>
+        </div>,
+        {
+          icon: "⏳",
+          autoClose: 2000
+        }
+      );
+      
+      setLoading(true);
+      const oldStock = productToConfirm.stock;
+      const newStock = Math.max(0, oldStock - removeQuantity);
+      
+      // Actualizar el producto
+      await updateProduct(productToConfirm.id, { stock: newStock });
+      
+      // Recargar datos
+      await loadData();
+      
+      // Toast de CONFIRMACIÓN después de actualizar
+      setTimeout(() => {
+        toast.success(
+          <div>
+            <strong>¡Stock reducido con éxito!</strong>
+            <div className="toast-details">
+              {removeQuantity === 1 
+                ? `Se quitó 1 unidad de ${productToConfirm.name}`
+                : `Se quitaron ${removeQuantity} unidades de ${productToConfirm.name}`
+              }
+              <br />
+              Stock anterior: {oldStock} → Nuevo stock: {newStock}
+            </div>
+          </div>,
+          {
+            icon: "✅",
+            autoClose: 5000
+          }
+        );
+        
+        // Toasts adicionales según el nivel de stock
+        if (newStock <= 5 && newStock > 0) {
+          setTimeout(() => {
+            toast.warning(
+              <div>
+                <strong>¡Stock bajo!</strong>
+                <div className="toast-details">
+                  Solo quedan {newStock} unidades de {productToConfirm.name}
+                </div>
+              </div>,
+              {
+                icon: "⚠️",
+                autoClose: 5000
+              }
+            );
+          }, 300);
+        } else if (newStock === 0) {
+          setTimeout(() => {
+            toast.error(
+              <div>
+                <strong>¡Producto agotado!</strong>
+                <div className="toast-details">
+                  {productToConfirm.name} se ha quedado sin stock
+                </div>
+              </div>,
+              {
+                icon: "🚨",
+                autoClose: 5000
+              }
+            );
+          }, 300);
+        }
+      }, 500);
+    } catch (error) {
+      console.error('Error al reducir stock:', error);
+      toast.error('Error al actualizar el inventario', {
+        autoClose: 4000
+      });
+    } finally {
+      setLoading(false);
+      setProductToConfirm(null);
+      setShowRemoveConfirm(false);
+      setRemoveQuantity(1);
+    }
+  };
+  
+  // Una prueba rápida para asegurarnos que los toasts funcionan
+  useEffect(() => {
+    // Usamos una ref en memoria en lugar de sessionStorage para desarrollo
+    if (!hasShownWelcome) {
+      // Marcamos que ya mostramos antes de ejecutar el toast
+      setHasShownWelcome(true);
+      
+      setTimeout(() => {
+        toast.info(
+          <div>
+            <strong>Bienvenido al Sistema de Inventario</strong>
+            <div className="toast-details">
+              Usa el escáner de códigos de barras para buscar o actualizar productos
+            </div>
+          </div>,
+          {
+            icon: "👋",
+            autoClose: 5000,
+            position: "top-center",
+            // Usar un ID único para este toast para evitar duplicados
+            toastId: "welcome-toast"
+          }
+        );
+      }, 1000);
+    }
+  }, [hasShownWelcome]); // Dependemos del estado para evitar loops
+  
   if (loading) return <div className="loading-screen">Cargando inventario...</div>;
   
   return (
@@ -368,11 +746,78 @@ function App() {
         toastClassName="app-toast"
         bodyClassName="toast-body"
         closeButton={true}
+        style={{ zIndex: 9999 }}
       />
       
       <header className="app-header">
         <h1>Sistema de Inventario</h1>
         <div className="header-actions">
+          <div className="quick-add-dropdown" ref={dropdownRef}>
+            <button
+              className='quick-add-button'
+              onClick={handleQuickAddForm}
+              aria-label="Agregar producto por código de barras"
+            >
+              <i className="icon-barcode"></i>
+              Agregar Rápido
+            </button>
+            
+            {showQuickAdd && (
+              <div className="quick-add-dropdown-content">
+                <h3>Agregar +1 al inventario</h3>
+                <input
+                  type="text"
+                  placeholder="Escanear código de barras aquí..."
+                  value={barcodeInput}
+                  onChange={(e) => setBarcodeInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
+                  className="barcode-input"
+                  aria-label="Escanear código de barras"
+                  ref={barcodeInputRef}
+                  autoFocus
+                />
+                <div className="quick-add-buttons">
+                  {confirmAction === 'quickAdd' && productToConfirm ? (
+                    <div className="confirm-action">
+                      <p>¿Agregar 1 unidad de <strong>{productToConfirm.name}</strong>?</p>
+                      <div className="confirm-buttons">
+                        <button
+                          className="primary-button"
+                          onClick={handleConfirmAction}
+                        >
+                          Confirmar
+                        </button>
+                        <button
+                          className="secondary-button"
+                          onClick={handleCancelConfirm}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="quick-add-button-group">
+                      <button
+                        className="primary-button action-button-equal"
+                        onClick={handleQuickAdd}
+                        aria-label="Agregar +1 al inventario"
+                      >
+                        <i className="icon-add"></i>
+                        Agregar +1
+                      </button>
+                      <button
+                        className="secondary-button action-button-equal"
+                        onClick={() => setShowQuickAdd(false)}
+                        aria-label="Cancelar"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           <button 
             className="primary-button"
             onClick={() => setShowProductForm(true)}
@@ -444,7 +889,7 @@ function App() {
                 type="text"
                 placeholder="Escanear código de barras aquí..."
                 value={barcodeInput}
-                onChange={handleBarcodeSearch}
+                onChange={(e) => setBarcodeInput(e.target.value)}
                 onKeyDown={handleBarcodeSearch}
                 className="barcode-input"
                 aria-label="Escanear código de barras"
@@ -544,6 +989,15 @@ function App() {
                           >
                             <i className="icon-view"></i>
                           </button>
+                          <button 
+                            className="action-button decrease-button" 
+                            onClick={() => handleQuickRemoveInTable(product)}
+                            title="Quitar 1 unidad"
+                            aria-label={`Quitar 1 unidad de ${product.name}`}
+                            disabled={product.stock <= 0}
+                          >
+                            <i className="icon-remove"></i>
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -576,6 +1030,79 @@ function App() {
       <footer className="app-footer">
         <p>Administrador de inventario v1.0 | Desarrollado en México</p>
       </footer>
+
+      {/* Modal para quitar unidades del stock */}
+      {showRemoveConfirm && productToConfirm && (
+        <div className="product-form-overlay">
+          <div className="remove-stock-container">
+            <h2>Quitar unidades del inventario</h2>
+            <p>
+              Producto: <strong>{productToConfirm.name}</strong>
+              <br />
+              Stock actual: <strong>{productToConfirm.stock}</strong>
+            </p>
+            
+            <div className="remove-stock-form">
+              <label htmlFor="removeQuantity">Cantidad a quitar:</label>
+              <input
+                id="removeQuantity"
+                type="number"
+                min="1"
+                max={productToConfirm.stock}
+                value={removeQuantity}
+                onChange={(e) => setRemoveQuantity(
+                  Math.min(
+                    Math.max(1, parseInt(e.target.value) || 1),
+                    productToConfirm.stock
+                  )
+                )}
+                className="quantity-input"
+              />
+              
+              <div className="quantity-buttons">
+                <button 
+                  className="quantity-btn decrease"
+                  onClick={() => setRemoveQuantity(prev => Math.max(1, prev - 1))}
+                  disabled={removeQuantity <= 1}
+                >
+                  -
+                </button>
+                <span className="quantity-display">{removeQuantity}</span>
+                <button 
+                  className="quantity-btn increase"
+                  onClick={() => setRemoveQuantity(prev => Math.min(productToConfirm.stock, prev + 1))}
+                  disabled={removeQuantity >= productToConfirm.stock}
+                >
+                  +
+                </button>
+              </div>
+              
+              <div className="confirm-buttons">
+                <button
+                  className="primary-button"
+                  onClick={handleReduceProductStock}
+                >
+                  Confirmar
+                </button>
+                <button
+                  className="secondary-button"
+                  onClick={() => {
+                    setShowRemoveConfirm(false);
+                    setProductToConfirm(null);
+                    setRemoveQuantity(1);
+                    toast.info("Operación cancelada", {
+                      icon: "❌",
+                      autoClose: 2000
+                    });
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

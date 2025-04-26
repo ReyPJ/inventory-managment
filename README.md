@@ -1,12 +1,51 @@
-# React + Vite
+# Sistema de Inventario
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación de escritorio para gestión de inventario sin conexión con soporte para lectores de código de barras, construida con Electron, React y SQLite.
 
-Currently, two official plugins are available:
+## Características
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Gestión de productos y categorías (CRUD completo)
+- Soporte para lectores de código de barras
+- Búsqueda de información de productos en línea mediante código de barras (cuando hay conexión)
+- Base de datos local SQLite que funciona sin conexión
+- Interfaz moderna con React
 
-## Expanding the ESLint configuration
+## Requisitos
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Node.js (versión 18+)
+- npm o yarn
+
+## Desarrollo
+
+Para ejecutar la aplicación en modo desarrollo:
+
+```bash
+# Instalar dependencias
+npm install
+
+# Iniciar en modo desarrollo
+npm run electron:dev
+```
+
+## Construcción para Windows
+
+Para construir la aplicación como un ejecutable para Windows:
+
+```bash
+# Construir la aplicación
+npm run build:win
+```
+
+El archivo ejecutable se generará en la carpeta `release` y estará listo para ser instalado en cualquier sistema Windows.
+
+## Configuración
+
+La aplicación guarda la base de datos en:
+
+- **Desarrollo**: en la raíz del proyecto como `database.sqlite`
+- **Producción**: en la carpeta de datos del usuario de la aplicación
+
+## Notas
+
+- La sincronización con una API de FastAPI está planificada para futuras versiones
+- Se recomienda hacer backup periódicos de la base de datos
