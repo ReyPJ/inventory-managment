@@ -1,0 +1,382 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import '../styles/ProductForm.css';
+import { searchProductByBarcode } from '../utils/barcodeSearch';
+import { FaSearch } from 'react-icons/fa';
+import { MdCancel } from 'react-icons/md';
+import { toast } from 'react-toastify';
+
+const ProductForm = ({ product, categories, onSave, onCancel }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResult, setSearchResult] = useState(null);
+  const descriptionRef = useRef(null);
+  const barcodeInputRef = useRef(null);
+  
+  const [formData, setFormData] = useState({
+    barcode: '',
+    name: '',
+    description: '',
+    price: '',
+    stock: '',
+    CategoryId: categories && categories.length > 0 ? categories[0].id.toString() : '1' // Valor por defecto
+  });
+  
+  const [formErrors, setFormErrors] = useState({});
+  
+  // Cargar datos iniciales si se está editando un producto
+  useEffect(() => {
+    if (product) {
+      setFormData({
+        id: product.id || '',
+        barcode: product.barcode || '',
+        name: product.name || '',
+        description: product.description || '',
+        price: product.price ? product.price.toString() : '',
+        stock: product.stock ? product.stock.toString() : '',
+        CategoryId: product.CategoryId ? product.CategoryId.toString() : 
+                  (categories && categories.length > 0 ? categories[0].id.toString() : '1')
+      });
+
+      // Si tiene código de barras pero no nombre, intentar buscarlo
+      if (product.barcode && !product.name) {
+        setTimeout(() => {
+          handleBarcodeSearch();
+        }, 500);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product, categories]);
+  
+  // Cargar el producto si se proporciona un código de barras
+  const handleBarcodeSearch = useCallback(async () => {
+    if (!formData.barcode.trim()) {
+      setFormErrors(prev => ({ ...prev, barcode: 'Ingrese un código de barras' }));
+      return;
+    }
+    
+    try {
+      setIsSearching(true);
+      setFormErrors(prev => ({ ...prev, barcode: '' }));
+      
+      // Buscar en línea 
+      const onlineProduct = await searchProductByBarcode(formData.barcode);
+      
+      if (onlineProduct) {
+        setSearchResult(onlineProduct);
+        toast.success('¡Producto encontrado en línea!');
+      } else {
+        toast.info('No se encontró información del producto. Por favor, ingrese los datos manualmente.');
+      }
+      
+    } catch (error) {
+      console.error('Error al buscar el producto:', error);
+      toast.error('Error al buscar el producto en línea');
+    } finally {
+      setIsSearching(false);
+    }
+  }, [formData.barcode]);
+  
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    let updatedValue = value;
+    
+    // Validaciones especiales para ciertos campos
+    if (name === 'price' || name === 'stock') {
+      // Permitir solo números y un punto decimal
+      if (!/^(\d*\.?\d*)$/.test(value) && value !== '') {
+        return;
+      }
+    }
+    
+    setFormData(prev => ({ ...prev, [name]: updatedValue }));
+    
+    // Limpiar errores al editar
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+  
+  const handleDescriptionChange = (e) => {
+    const value = e.target.value;
+    if (value.length <= 500) {
+      setFormData(prev => ({ ...prev, description: value }));
+      
+      if (formErrors.description) {
+        setFormErrors(prev => ({ ...prev, description: '' }));
+      }
+    }
+  };
+  
+  const handleUseSearchResult = () => {
+    if (searchResult) {
+      setFormData(prev => ({
+        ...prev,
+        name: searchResult.name || '',
+        description: searchResult.description || '',
+        // Mantener los demás campos como estaban para que el usuario los complete
+      }));
+      setSearchResult(null);
+      toast.success('Información aplicada al formulario');
+      
+      // Enfocar el campo de descripción para que el usuario pueda seguir completando
+      if (descriptionRef.current) {
+        descriptionRef.current.focus();
+      }
+    }
+  };
+  
+  const handleCancelSearch = () => {
+    setSearchResult(null);
+  };
+  
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.barcode.trim()) {
+      errors.barcode = 'El código de barras es requerido';
+    }
+    
+    if (!formData.name.trim()) {
+      errors.name = 'El nombre es requerido';
+    }
+    
+    if (!formData.price || parseFloat(formData.price) <= 0) {
+      errors.price = 'Ingrese un precio válido';
+    }
+    
+    if (!formData.stock || parseInt(formData.stock) < 0) {
+      errors.stock = 'Ingrese una cantidad válida';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error('Por favor, corrija los errores en el formulario');
+      return;
+    }
+    
+    try {
+      setIsSubmitting(true);
+      
+      const productData = {
+        id: formData.id,
+        barcode: formData.barcode,
+        name: formData.name,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock),
+        CategoryId: parseInt(formData.CategoryId)
+      };
+      
+      console.log('Guardando producto:', productData);
+      
+      // Llamar a la función de guardar del componente padre
+      await onSave(productData);
+      
+    } catch (error) {
+      console.error('Error al guardar el producto:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const handleKeyPress = (e) => {
+    // Si se presiona Enter en el campo de código de barras, realizar la búsqueda
+    if (e.key === 'Enter' && e.target.name === 'barcode') {
+      e.preventDefault();
+      handleBarcodeSearch();
+    }
+  };
+  
+  return (
+    <div className="product-form-container">
+      <div className="product-form-header">
+        <h2>{formData.id ? 'Editar Producto' : 'Nuevo Producto'}</h2>
+        <button 
+          className="close-button" 
+          onClick={onCancel}
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+      </div>
+      
+      <form className="product-form" onSubmit={handleSubmit}>
+        <div className="form-row">
+          <div className="input-group">
+            <label htmlFor="barcode">Código de Barras</label>
+            <div className="barcode-group">
+              <input
+                type="text"
+                id="barcode"
+                name="barcode"
+                value={formData.barcode}
+                onChange={handleChange}
+                onKeyPress={handleKeyPress}
+                placeholder="Escanee o ingrese el código"
+                ref={barcodeInputRef}
+                autoFocus
+              />
+              {isSearching ? (
+                <button
+                  type="button"
+                  className="barcode-search-btn"
+                  onClick={handleCancelSearch}
+                >
+                  <MdCancel style={{ fontSize: '18px', marginRight: '5px' }} />
+                  Cancelar
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="barcode-search-btn"
+                  onClick={handleBarcodeSearch}
+                  disabled={formData.barcode.trim() === '' || isSearching}
+                >
+                  <FaSearch style={{ fontSize: '16px', marginRight: '5px' }} />
+                  Buscar
+                </button>
+              )}
+            </div>
+            {formErrors.barcode && <div className="form-error">{formErrors.barcode}</div>}
+          </div>
+          
+          {/* Nombre del producto */}
+          <div className="input-group">
+            <label htmlFor="name">Nombre del Producto</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Nombre del producto"
+            />
+            {formErrors.name && <div className="form-error">{formErrors.name}</div>}
+          </div>
+          
+          {/* Precio de venta */}
+          <div className="input-group">
+            <label htmlFor="price">Precio</label>
+            <div className="price-input-group">
+              <span className="currency-symbol">$</span>
+              <input
+                type="text"
+                id="price"
+                name="price"
+                value={formData.price}
+                onChange={handleChange}
+                placeholder="0.00"
+              />
+            </div>
+            {formErrors.price && <div className="form-error">{formErrors.price}</div>}
+          </div>
+          
+          {/* Stock */}
+          <div className="input-group">
+            <label htmlFor="stock">Cantidad en Inventario</label>
+            <input
+              type="text"
+              id="stock"
+              name="stock"
+              value={formData.stock}
+              onChange={handleChange}
+              placeholder="0"
+            />
+            {formErrors.stock && <div className="form-error">{formErrors.stock}</div>}
+          </div>
+          
+          {/* Categoría */}
+          <div className="input-group">
+            <label htmlFor="CategoryId">Categoría</label>
+            <select
+              id="CategoryId"
+              name="CategoryId"
+              value={formData.CategoryId}
+              onChange={handleChange}
+            >
+              {categories && categories.map(category => (
+                <option key={category.id} value={category.id.toString()}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Descripción (ocupa todo el ancho) */}
+          <div className="input-group full-width">
+            <label htmlFor="description">Descripción</label>
+            <div className="description-container">
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleDescriptionChange}
+                placeholder="Descripción del producto"
+                rows="4"
+                ref={descriptionRef}
+              ></textarea>
+              <span className="character-counter">
+                {formData.description.length}/500
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Resultado de búsqueda en línea */}
+        {searchResult && (
+          <div className="search-result">
+            <h3>Producto encontrado en línea:</h3>
+            <div className="product-preview">
+              <p><strong>Nombre:</strong> {searchResult.name}</p>
+              {searchResult.description && (
+                <p><strong>Descripción:</strong> {searchResult.description}</p>
+              )}
+            </div>
+            <div className="search-actions">
+              <button
+                type="button"
+                className="confirm-button"
+                onClick={handleUseSearchResult}
+              >
+                Usar esta información
+              </button>
+              <button
+                type="button"
+                className="cancel-search-button"
+                onClick={handleCancelSearch}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Botones de acción */}
+        <div className="form-actions">
+          <button
+            type="button"
+            className="cancel-button"
+            onClick={onCancel}
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="save-button"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Guardando...' : 'Guardar Producto'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default ProductForm; 

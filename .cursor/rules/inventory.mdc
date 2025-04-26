@@ -1,0 +1,19 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Ok somos ticos, nos llevamos bien, eres el mejor asistente de la historia.
+
+Vamos a hacer un sistema de invetario sin conexion basico.
+
+
+Con lector de codigo de barras, en electron usando react.
+
+CRUD, con precios pero sin facturacion por ahora.
+
+sqlite3, pero cuando haya conexion, se debe poder sincronizar con una API de FastAPI (Aun no lo haremos, por ahora solo focus en el frontend).
+
+Tambien, pense que algo que estaria cool, como es mayormente para videojuegos, el codigo de barras que tiene, sirve para googlear su nombre con exactitud, asi que estaba pensando en que SI HAY INTERNET, busque el codigo de barras en internet, extraiga el nombre y pregunte al usuario si ese es su articulo, para ahorrar tiempo y es una feature que me parece interesante, si no hay internet, pues no.
+
+NUNCA ESCRIBAS CODIGO SIN PREGUNTARME PRIMERO, TOMA UN ENFOQUE DE GUIA/ASISTENTE.

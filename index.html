@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Administrador de Inventario</title>
+    <style>
+      /* Garantizar visibilidad del cursor en campos de texto */
+      input,
+      textarea,
+      select {
+        cursor: text;
+        caret-color: #2ecc71;
+      }
+
+      /* Mejorar visibilidad del foco */
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: 2px solid #2ecc71;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Script para ayudar con el foco en campos después de diálogos -->
+    <script>
+      // Script simplificado para manejar el foco en inputs
+      document.addEventListener("click", function (e) {
+        if (
+          e.target.tagName === "INPUT" ||
+          e.target.tagName === "TEXTAREA" ||
+          e.target.tagName === "SELECT"
+        ) {
+          // Si el elemento es un campo de formulario, asegurar que obtenga el foco
+          setTimeout(() => {
+            e.target.focus();
+
+            // Para inputs de texto, colocar el cursor al final
+            if (
+              (e.target.tagName === "INPUT" && e.target.type !== "number") ||
+              e.target.tagName === "TEXTAREA"
+            ) {
+              try {
+                const len = e.target.value.length;
+                e.target.setSelectionRange(len, len);
+              } catch (err) {
+                // Ignorar errores
+              }
+            }
+          }, 0);
+        }
+      });
+
+      // Versión simplificada para mantener el foco después de confirmaciones
+      const originalConfirm = window.confirm;
+      window.confirm = function (...args) {
+        const activeElement = document.activeElement;
+        const result = originalConfirm.apply(this, args);
+
+        setTimeout(() => {
+          if (activeElement && document.contains(activeElement)) {
+            activeElement.focus();
+          }
+        }, 100);
+
+        return result;
+      };
+    </script>
+  </body>
+</html>
