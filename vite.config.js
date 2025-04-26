@@ -1,6 +1,12 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import electron from "vite-plugin-electron";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// En ES modules, necesitamos definir __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -31,14 +37,18 @@ export default defineConfig({
       },
     ]),
   ],
+  base: "./",
   optimizeDeps: {
     exclude: ["electron"],
   },
   build: {
+    outDir: "dist",
+    assetsDir: "assets",
     rollupOptions: {
       input: {
-        index: "./index.html",
+        index: path.resolve(__dirname, "index.html"),
       },
     },
+    emptyOutDir: true,
   },
 });

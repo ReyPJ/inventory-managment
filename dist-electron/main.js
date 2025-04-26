@@ -1,328 +1,274 @@
-import { app, ipcMain, BrowserWindow } from "electron";
-import path from "path";
-import { fileURLToPath } from "url";
-import process from "process";
-import { Sequelize, DataTypes, Op } from "sequelize";
-const __filename$1 = fileURLToPath(import.meta.url);
-const __dirname$1 = path.dirname(__filename$1);
-const dbPath = path.join(__dirname$1, "../../../database.sqlite");
-const sequelize = new Sequelize({
+import { app as y, ipcMain as o, BrowserWindow as _ } from "electron";
+import l from "path";
+import { fileURLToPath as E } from "url";
+import n from "process";
+import { Sequelize as b, DataTypes as c, Op as h } from "sequelize";
+const O = E(import.meta.url), g = l.dirname(O);
+let u, m;
+if (n.env.NODE_ENV === "production" && n.type)
+  try {
+    m = n.env.APPDATA || (n.platform === "darwin" ? n.env.HOME + "/Library/Application Support" : n.env.HOME + "/.local/share"), u = l.join(m, "inventory-db", "database.sqlite");
+  } catch (r) {
+    console.error("Error al obtener ruta de datos:", r), u = l.join(g, "../../../database.sqlite");
+  }
+else
+  u = l.join(g, "../../../database.sqlite");
+try {
+  const r = l.dirname(u);
+  r.includes("inventory-db") && console.log(`Asegurando que el directorio existe: ${r}`);
+} catch (r) {
+  console.error("Error al crear directorio:", r);
+}
+console.log(`Base de datos usando ruta: ${u}`);
+const f = new b({
   dialect: "sqlite",
-  storage: dbPath,
-  logging: false
-  // cambiar a false para producción
-});
-const Product = sequelize.define("Product", {
+  storage: u,
+  logging: n.env.NODE_ENV === "development"
+  // solo logging en desarrollo
+}), s = f.define("Product", {
   id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true
+    type: c.INTEGER,
+    primaryKey: !0,
+    autoIncrement: !0
   },
   barcode: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true
+    type: c.STRING,
+    allowNull: !1,
+    unique: !0
   },
   name: {
-    type: DataTypes.STRING,
-    allowNull: false
+    type: c.STRING,
+    allowNull: !1
   },
   description: {
-    type: DataTypes.TEXT,
-    allowNull: true
+    type: c.TEXT,
+    allowNull: !0
   },
   price: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
+    type: c.DECIMAL(10, 2),
+    allowNull: !1,
     defaultValue: 0
   },
   stock: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
+    type: c.INTEGER,
+    allowNull: !1,
     defaultValue: 0
   },
   synced: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
+    type: c.BOOLEAN,
+    defaultValue: !1
   }
-});
-const Category = sequelize.define("Category", {
+}), a = f.define("Category", {
   id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true
+    type: c.INTEGER,
+    primaryKey: !0,
+    autoIncrement: !0
   },
   name: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true
+    type: c.STRING,
+    allowNull: !1,
+    unique: !0
   },
   description: {
-    type: DataTypes.TEXT,
-    allowNull: true
+    type: c.TEXT,
+    allowNull: !0
   }
 });
-Category.hasMany(Product);
-Product.belongsTo(Category);
-async function initDatabase() {
+a.hasMany(s);
+s.belongsTo(a);
+async function S() {
   try {
-    await sequelize.sync();
-    const defaultCategories = ["PS4", "PS5"];
-    for (const catName of defaultCategories) {
-      await Category.findOrCreate({
-        where: { name: catName }
+    await f.sync();
+    const r = ["PS4", "PS5"];
+    for (const e of r)
+      await a.findOrCreate({
+        where: { name: e }
       });
-    }
-    console.log("Base de datos inicializada correctamente");
-    return true;
-  } catch (error) {
-    console.error("Error al inicializar la base de datos:", error);
-    return false;
+    return console.log("Base de datos inicializada correctamente"), !0;
+  } catch (r) {
+    return console.error("Error al inicializar la base de datos:", r), !1;
   }
 }
-function toJSON$1(data) {
-  if (!data) return null;
-  if (Array.isArray(data)) {
-    return data.map((item) => item.toJSON ? item.toJSON() : item);
-  }
-  return data.toJSON ? data.toJSON() : data;
+function d(r) {
+  return r ? Array.isArray(r) ? r.map((e) => e.toJSON ? e.toJSON() : e) : r.toJSON ? r.toJSON() : r : null;
 }
-async function getAllProducts() {
+async function A() {
   try {
-    const products = await Product.findAll({
-      include: [Category],
+    const r = await s.findAll({
+      include: [a],
       order: [["updatedAt", "DESC"]]
     });
-    return toJSON$1(products);
-  } catch (err) {
-    console.error("Error al obtener productos:", err);
-    return [];
+    return d(r);
+  } catch (r) {
+    return console.error("Error al obtener productos:", r), [];
   }
 }
-async function getProductById(id) {
+async function I(r) {
   try {
-    const product = await Product.findByPk(id, {
-      include: [Category]
+    const e = await s.findByPk(r, {
+      include: [a]
     });
-    return toJSON$1(product);
-  } catch (err) {
-    console.error("Error al obtener el producto:", err);
-    return null;
+    return d(e);
+  } catch (e) {
+    return console.error("Error al obtener el producto:", e), null;
   }
 }
-async function getProductByBarcode(barcode) {
+async function T(r) {
   try {
-    const product = await Product.findOne({
-      where: { barcode },
-      include: [Category]
+    const e = await s.findOne({
+      where: { barcode: r },
+      include: [a]
     });
-    return toJSON$1(product);
-  } catch (err) {
-    console.error("Error al obtener el producto por codigo de barras:", err);
-    return null;
+    return d(e);
+  } catch (e) {
+    return console.error("Error al obtener el producto por codigo de barras:", e), null;
   }
 }
-async function createProduct(productData) {
+async function v(r) {
   try {
-    const product = await Product.create(productData);
-    return toJSON$1(product);
-  } catch (err) {
-    console.error("Error al crear el producto:", err);
-    throw err;
+    const e = await s.create(r);
+    return d(e);
+  } catch (e) {
+    throw console.error("Error al crear el producto:", e), e;
   }
 }
-async function updateProduct(id, productData) {
+async function B(r, e) {
   try {
-    const product = await Product.findByPk(id);
-    if (!product) return null;
-    await product.update(productData);
-    return toJSON$1(product);
-  } catch (err) {
-    console.error("Error al actualizar el producto:", err);
-    throw err;
+    const t = await s.findByPk(r);
+    return t ? (await t.update(e), d(t)) : null;
+  } catch (t) {
+    throw console.error("Error al actualizar el producto:", t), t;
   }
 }
-async function deleteProduct(id) {
+async function C(r) {
   try {
-    const product = await Product.findByPk(id);
-    if (!product) return false;
-    await product.destroy();
-    return true;
-  } catch (err) {
-    console.error("Error al eliminar el producto:", err);
-    return false;
+    const e = await s.findByPk(r);
+    return e ? (await e.destroy(), !0) : !1;
+  } catch (e) {
+    return console.error("Error al eliminar el producto:", e), !1;
   }
 }
-async function searchProducts(query) {
+async function D(r) {
   try {
-    const products = await Product.findAll({
+    const e = await s.findAll({
       where: {
-        [Op.or]: [
-          { name: { [Op.like]: `%${query}%` } },
-          { barcode: { [Op.like]: `%${query}%` } }
+        [h.or]: [
+          { name: { [h.like]: `%${r}%` } },
+          { barcode: { [h.like]: `%${r}%` } }
         ]
       },
-      include: [Category]
+      include: [a]
     });
-    return toJSON$1(products);
-  } catch (err) {
-    console.error("Error al buscar productos:", err);
-    return [];
+    return d(e);
+  } catch (e) {
+    return console.error("Error al buscar productos:", e), [];
   }
 }
-function toJSON(data) {
-  if (!data) return null;
-  if (Array.isArray(data)) {
-    return data.map((item) => item.toJSON ? item.toJSON() : item);
-  }
-  return data.toJSON ? data.toJSON() : data;
+function w(r) {
+  return r ? Array.isArray(r) ? r.map((e) => e.toJSON ? e.toJSON() : e) : r.toJSON ? r.toJSON() : r : null;
 }
-async function getAllCategories() {
+async function J() {
   try {
-    const categories = await Category.findAll();
-    return toJSON(categories) || [];
-  } catch (error) {
-    console.error("Error al obtener las categorias: ", error);
-    return [];
+    const r = await a.findAll();
+    return w(r) || [];
+  } catch (r) {
+    return console.error("Error al obtener las categorias: ", r), [];
   }
 }
-async function getCategoryById(id) {
+async function j(r) {
   try {
-    const category = await Category.findByPk(id);
-    return toJSON(category);
-  } catch (error) {
-    console.error("Error al obtener la categoria:", error);
-    return null;
+    const e = await a.findByPk(r);
+    return w(e);
+  } catch (e) {
+    return console.error("Error al obtener la categoria:", e), null;
   }
 }
-async function createCategory(categoryData) {
+async function k(r) {
   try {
-    const category = await Category.create(categoryData);
-    return toJSON(category);
-  } catch (error) {
-    console.error("Error al crear la categoria:", error);
-    throw error;
+    const e = await a.create(r);
+    return w(e);
+  } catch (e) {
+    throw console.error("Error al crear la categoria:", e), e;
   }
 }
-async function updateCategory(id, categoryData) {
+async function q(r, e) {
   try {
-    const category = await Category.findByPk(id);
-    if (!category) return null;
-    await category.update(categoryData);
-    return toJSON(category);
-  } catch (error) {
-    console.error("Error al crear la categoria: ", error);
-    throw error;
+    const t = await a.findByPk(r);
+    return t ? (await t.update(e), w(t)) : null;
+  } catch (t) {
+    throw console.error("Error al crear la categoria: ", t), t;
   }
 }
-async function deleteCategory(id) {
+async function R(r) {
   try {
-    const category = await Category.findByPk(id);
-    if (!category) return null;
-    await category.destroy();
-    return true;
-  } catch (error) {
-    console.error("Error al eliminar la categoria:", error);
-    return false;
+    const e = await a.findByPk(r);
+    return e ? (await e.destroy(), !0) : null;
+  } catch (e) {
+    return console.error("Error al eliminar la categoria:", e), !1;
   }
 }
-async function up(queryInterface) {
+async function x(r) {
   try {
-    const tableInfo = await queryInterface.describeTable("Products");
-    if (!tableInfo.description) {
-      await queryInterface.addColumn("Products", "description", {
-        type: Sequelize.TEXT,
-        allowNull: true
-      });
-      console.log(
-        '✅ Columna "description" añadida correctamente a la tabla Products'
-      );
-    } else {
-      console.log('ℹ️ La columna "description" ya existe en la tabla Products');
-    }
-    return Promise.resolve();
-  } catch (error) {
-    console.error("❌ Error al migrar:", error);
-    return Promise.reject(error);
+    return (await r.describeTable("Products")).description ? console.log('ℹ️ La columna "description" ya existe en la tabla Products') : (await r.addColumn("Products", "description", {
+      type: b.TEXT,
+      allowNull: !0
+    }), console.log(
+      '✅ Columna "description" añadida correctamente a la tabla Products'
+    )), Promise.resolve();
+  } catch (e) {
+    return console.error("❌ Error al migrar:", e), Promise.reject(e);
   }
 }
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-let mainWindow;
-function createWindow() {
-  mainWindow = new BrowserWindow({
+const V = E(import.meta.url), p = l.dirname(V), N = n.env.NODE_ENV === "production", $ = N ? l.join(p, "../") : l.join(p, "../dist/");
+let i;
+function P() {
+  if (i = new _({
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: true
-    }
-  });
-  if (process.env.NODE_ENV === "development") {
-    mainWindow.webContents.openDevTools({ mode: "right" });
-    mainWindow.loadURL("http://localhost:5173");
-  } else {
-    mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+      preload: l.join(p, "preload.js"),
+      nodeIntegration: !1,
+      contextIsolation: !0,
+      sandbox: !0
+    },
+    // Configuración adicional para ventana de producción
+    show: !1,
+    // No mostrar hasta que esté lista
+    minWidth: 1024,
+    minHeight: 768,
+    title: "Sistema de Inventario"
+  }), i.once("ready-to-show", () => {
+    i.show();
+  }), !N)
+    i.webContents.openDevTools({ mode: "right" }), i.loadURL("http://localhost:5173");
+  else {
+    const r = l.join($, "index.html");
+    console.log("Cargando desde:", r), i.loadFile(r);
   }
-  mainWindow.on("closed", function() {
-    mainWindow = null;
+  i.on("closed", function() {
+    i = null;
   });
 }
-function setupIpcHandlers() {
-  ipcMain.handle("get-all-products", async () => {
-    return await getAllProducts();
-  });
-  ipcMain.handle("get-product-by-id", async (_, id) => {
-    return await getProductById(id);
-  });
-  ipcMain.handle("get-product-by-barcode", async (_, barcode) => {
-    return await getProductByBarcode(barcode);
-  });
-  ipcMain.handle("create-product", async (_, productData) => {
-    return await createProduct(productData);
-  });
-  ipcMain.handle("update-product", async (_, { id, productData }) => {
-    return await updateProduct(id, productData);
-  });
-  ipcMain.handle("delete-product", async (_, id) => {
-    return await deleteProduct(id);
-  });
-  ipcMain.handle("search-products", async (_, query) => {
-    return await searchProducts(query);
-  });
-  ipcMain.handle("get-all-categories", async () => {
-    return await getAllCategories();
-  });
-  ipcMain.handle("get-category-by-id", async (_, id) => {
-    return await getCategoryById(id);
-  });
-  ipcMain.handle("create-category", async (_, categoryData) => {
-    return await createCategory(categoryData);
-  });
-  ipcMain.handle("update-category", async (_, { id, categoryData }) => {
-    return await updateCategory(id, categoryData);
-  });
-  ipcMain.handle("delete-category", async (_, id) => {
-    return await deleteCategory(id);
-  });
+function z() {
+  o.handle("get-all-products", async () => await A()), o.handle("get-product-by-id", async (r, e) => await I(e)), o.handle("get-product-by-barcode", async (r, e) => await T(e)), o.handle("create-product", async (r, e) => await v(e)), o.handle("update-product", async (r, { id: e, productData: t }) => await B(e, t)), o.handle("delete-product", async (r, e) => await C(e)), o.handle("search-products", async (r, e) => await D(e)), o.handle("get-all-categories", async () => await J()), o.handle("get-category-by-id", async (r, e) => await j(e)), o.handle("create-category", async (r, e) => await k(e)), o.handle("update-category", async (r, { id: e, categoryData: t }) => await q(e, t)), o.handle("delete-category", async (r, e) => await R(e));
 }
-app.whenReady().then(async () => {
+async function G() {
   try {
-    const queryInterface = sequelize.getQueryInterface();
-    await up(queryInterface);
-    console.log("✅ Migraciones completadas correctamente");
-  } catch (error) {
-    console.error("❌ Error al ejecutar migraciones:", error);
+    const r = f.getQueryInterface();
+    await x(r), console.log("✅ Migraciones completadas correctamente"), await S(), console.log("✅ Base de datos inicializada correctamente");
+  } catch (r) {
+    console.error("❌ Error al configurar la base de datos:", r);
   }
-  await initDatabase();
-  setupIpcHandlers();
-  createWindow();
+}
+y.whenReady().then(async () => {
+  console.log("Ambiente:", n.env.NODE_ENV || "development"), console.log("Directorio de la aplicación:", p), await G(), z(), P();
 });
-app.on("window-all-closed", function() {
-  if (process.platform !== "darwin") app.quit();
+y.on("window-all-closed", function() {
+  n.platform !== "darwin" && y.quit();
 });
-app.on("activate", function() {
-  if (mainWindow === null) createWindow();
+y.on("activate", function() {
+  i === null && P();
+});
+n.on("uncaughtException", (r) => {
+  console.error("Error no capturado:", r);
 });

@@ -10,24 +10,38 @@ const __dirname = path.dirname(__filename);
 // Determinar la ruta de la base de datos basado en el entorno
 let dbPath;
 
-// Importar electron solo cuando sea necesario
-let app;
-try {
-  // Durante el build, electron puede no estar disponible
-  const electron = await import("electron");
-  app = electron.app;
-} catch {
-  console.log("No se pudo importar electron, usando ruta por defecto");
-}
-
-// Verificar si estamos en un entorno empaquetado
-if (process.env.NODE_ENV === "production" && app) {
-  // En producción (app empaquetada), usamos la carpeta userData para guardar la base de datos
-  const userDataPath = app.getPath("userData") || process.cwd();
-  dbPath = path.join(userDataPath, "database.sqlite");
+// Manejo simple para entornos de producción y desarrollo
+let userDataPath;
+if (process.env.NODE_ENV === "production" && process.type) {
+  try {
+    // En un entorno Electron, esto debería funcionar
+    // No necesitamos importar electron directamente
+    userDataPath =
+      process.env.APPDATA ||
+      (process.platform === "darwin"
+        ? process.env.HOME + "/Library/Application Support"
+        : process.env.HOME + "/.local/share");
+    dbPath = path.join(userDataPath, "inventory-db", "database.sqlite");
+  } catch (err) {
+    console.error("Error al obtener ruta de datos:", err);
+    // Fallback a la ruta por defecto
+    dbPath = path.join(__dirname, "../../../database.sqlite");
+  }
 } else {
   // En desarrollo, usamos la base de datos en la raíz del proyecto
   dbPath = path.join(__dirname, "../../../database.sqlite");
+}
+
+// Asegurar que el directorio existe
+try {
+  const dbDir = path.dirname(dbPath);
+  // Crear directorios si no existen (en Node.js moderno)
+  if (dbDir.includes("inventory-db")) {
+    console.log(`Asegurando que el directorio existe: ${dbDir}`);
+    // No hacemos nada aquí, Electron se encargará de crear el directorio
+  }
+} catch (err) {
+  console.error("Error al crear directorio:", err);
 }
 
 console.log(`Base de datos usando ruta: ${dbPath}`);

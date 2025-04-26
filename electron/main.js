@@ -15,6 +15,13 @@ import sequelize from "../src/db/config/database.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Determinar la ruta de la aplicación
+const isProd = process.env.NODE_ENV === "production";
+// En producción, la carpeta dist (con el front) está a un nivel diferente
+const distPath = isProd
+  ? path.join(__dirname, "../")
+  : path.join(__dirname, "../dist/");
+
 // Mantener una referencia global del objeto window
 let mainWindow;
 
@@ -42,14 +49,16 @@ function createWindow() {
   });
 
   // En desarrollo, carga desde el servidor de Vite
-  if (process.env.NODE_ENV === "development") {
+  if (!isProd) {
     // Abrir DevTools
     mainWindow.webContents.openDevTools({ mode: "right" });
     // Cargar la URL del servidor de desarrollo de Vite
     mainWindow.loadURL("http://localhost:5173");
   } else {
     // En producción, carga desde archivos construidos
-    mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+    const indexPath = path.join(distPath, "index.html");
+    console.log("Cargando desde:", indexPath);
+    mainWindow.loadFile(indexPath);
   }
 
   // Emitido cuando la ventana es cerrada
@@ -130,6 +139,9 @@ async function setupDatabase() {
 
 // Inicializar la aplicación
 app.whenReady().then(async () => {
+  console.log("Ambiente:", process.env.NODE_ENV || "development");
+  console.log("Directorio de la aplicación:", __dirname);
+
   await setupDatabase();
   setupIpcHandlers();
   createWindow();

@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "main": "electron/main.js",
+  "main": "dist-electron/main.js",
+  "description": "Sistema de gestión de inventario sin conexión",
+  "author": "Sistema de Inventarios",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -12,21 +14,25 @@
     "electron": "cross-env NODE_ENV=development electron .",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
     "build:electron": "vite build && electron-builder",
-    "build:win": "vite build && electron-builder --win"
+    "build:dir": "cross-env NODE_ENV=production vite build && electron-builder --dir",
+    "build:win": "cross-env NODE_ENV=production vite build && electron-builder --win"
   },
   "build": {
     "appId": "com.tuapp.inventario",
     "productName": "Sistema de Inventario",
     "files": [
       "dist/**/*",
-      "dist-electron/**/*"
+      "dist-electron/**/*",
+      "package.json"
     ],
     "directories": {
       "buildResources": "public",
       "output": "release"
     },
     "win": {
-      "target": ["nsis"]
+      "target": ["nsis"],
+      "icon": "public/icon.ico",
+      "artifactName": "Sistema-de-Inventario-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -38,7 +44,8 @@
         "from": "database.sqlite",
         "to": "database.sqlite"
       }
-    ]
+    ],
+    "asar": true
   },
   "dependencies": {
     "pg": "^8.11.3",

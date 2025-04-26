@@ -1,17 +1,17 @@
-const { contextBridge, ipcRenderer } = require("electron");
-contextBridge.exposeInMainWorld("api", {
+const { contextBridge: r, ipcRenderer: t } = require("electron");
+r.exposeInMainWorld("api", {
   // Productos
-  getAllProducts: () => ipcRenderer.invoke("get-all-products"),
-  getProductById: (id) => ipcRenderer.invoke("get-product-by-id", id),
-  getProductByBarcode: (barcode) => ipcRenderer.invoke("get-product-by-barcode", barcode),
-  createProduct: (productData) => ipcRenderer.invoke("create-product", productData),
-  updateProduct: (id, productData) => ipcRenderer.invoke("update-product", { id, productData }),
-  deleteProduct: (id) => ipcRenderer.invoke("delete-product", id),
-  searchProducts: (query) => ipcRenderer.invoke("search-products", query),
+  getAllProducts: () => t.invoke("get-all-products"),
+  getProductById: (e) => t.invoke("get-product-by-id", e),
+  getProductByBarcode: (e) => t.invoke("get-product-by-barcode", e),
+  createProduct: (e) => t.invoke("create-product", e),
+  updateProduct: (e, o) => t.invoke("update-product", { id: e, productData: o }),
+  deleteProduct: (e) => t.invoke("delete-product", e),
+  searchProducts: (e) => t.invoke("search-products", e),
   // Categorías
-  getAllCategories: () => ipcRenderer.invoke("get-all-categories"),
-  getCategoryById: (id) => ipcRenderer.invoke("get-category-by-id", id),
-  createCategory: (categoryData) => ipcRenderer.invoke("create-category", categoryData),
-  updateCategory: (id, categoryData) => ipcRenderer.invoke("update-category", { id, categoryData }),
-  deleteCategory: (id) => ipcRenderer.invoke("delete-category", id)
+  getAllCategories: () => t.invoke("get-all-categories"),
+  getCategoryById: (e) => t.invoke("get-category-by-id", e),
+  createCategory: (e) => t.invoke("create-category", e),
+  updateCategory: (e, o) => t.invoke("update-category", { id: e, categoryData: o }),
+  deleteCategory: (e) => t.invoke("delete-category", e)
 });
