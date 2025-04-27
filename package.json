@@ -1,7 +1,7 @@
 {
   "name": "inventory-managment",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "main": "dist-electron/main.js",
   "description": "Sistema de gestión de inventario sin conexión",
@@ -13,9 +13,12 @@
     "preview": "vite preview",
     "electron": "cross-env NODE_ENV=development electron .",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
-    "build:electron": "vite build && electron-builder",
-    "build:dir": "cross-env NODE_ENV=production vite build && electron-builder --dir",
-    "build:win": "cross-env NODE_ENV=production vite build && electron-builder --win"
+    "build:electron": "vite build && electron-builder --dir",
+    "build:preload-fix": "powershell -Command \"Copy-Item -Path ./electron/preload-simple.js -Destination ./dist-electron/preload-simple.js -Force\"",
+    "build:dir": "cross-env NODE_ENV=production vite build && npm run build:preload-fix && electron-builder --dir",
+    "build:win": "cross-env NODE_ENV=production vite build && npm run build:preload-fix && electron-builder --win",
+    "build:portable": "cross-env NODE_ENV=production vite build && npm run build:preload-fix && electron-builder --win portable",
+    "postinstall": "electron-builder install-app-deps"
   },
   "build": {
     "appId": "com.tuapp.inventario",
@@ -23,6 +26,7 @@
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
+      "electron/preload-simple.js",
       "package.json"
     ],
     "directories": {
@@ -43,9 +47,15 @@
       {
         "from": "database.sqlite",
         "to": "database.sqlite"
+      },
+      {
+        "from": "electron/preload-simple.js",
+        "to": "app.asar.unpacked/dist-electron/preload-simple.js"
       }
     ],
-    "asar": true
+    "asar": {
+      "smartUnpack": true
+    }
   },
   "dependencies": {
     "pg": "^8.11.3",

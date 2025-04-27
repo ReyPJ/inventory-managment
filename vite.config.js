@@ -32,6 +32,16 @@ export default defineConfig({
             rollupOptions: {
               external: ["electron"],
             },
+            minify: false,
+            sourcemap: true,
+            commonjsOptions: {
+              transformMixedEsModules: true,
+            },
+            lib: {
+              entry: "electron/preload.js",
+              formats: ["cjs"],
+              fileName: () => "preload.js",
+            },
           },
         },
       },

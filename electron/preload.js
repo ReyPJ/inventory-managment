@@ -1,26 +1,71 @@
 /* eslint-disable */
-// El preload.js debe usar CommonJS (require) en lugar de ESM
-const { contextBridge, ipcRenderer } = require("electron");
+// Código de preload modificado para funcionar tanto en producción como en desarrollo
+const { contextBridge, ipcRenderer } = require ? require("electron") : window.electron;
 
-contextBridge.exposeInMainWorld("api", {
-  // Productos
-  getAllProducts: () => ipcRenderer.invoke("get-all-products"),
-  getProductById: (id) => ipcRenderer.invoke("get-product-by-id", id),
-  getProductByBarcode: (barcode) =>
-    ipcRenderer.invoke("get-product-by-barcode", barcode),
-  createProduct: (productData) =>
-    ipcRenderer.invoke("create-product", productData),
-  updateProduct: (id, productData) =>
-    ipcRenderer.invoke("update-product", { id, productData }),
-  deleteProduct: (id) => ipcRenderer.invoke("delete-product", id),
-  searchProducts: (query) => ipcRenderer.invoke("search-products", query),
+// Función para mostrar logs en la consola
+const log = (msg, ...args) => {
+  console.log(`[Preload] ${msg}`, ...args);
+};
 
-  // Categorías
-  getAllCategories: () => ipcRenderer.invoke("get-all-categories"),
-  getCategoryById: (id) => ipcRenderer.invoke("get-category-by-id", id),
-  createCategory: (categoryData) =>
-    ipcRenderer.invoke("create-category", categoryData),
-  updateCategory: (id, categoryData) =>
-    ipcRenderer.invoke("update-category", { id, categoryData }),
-  deleteCategory: (id) => ipcRenderer.invoke("delete-category", id),
-});
+try {
+  log("Inicializando preload.js");
+
+  // Intentar exponer la API a través de contextBridge
+  contextBridge.exposeInMainWorld("electronAPI", {
+    // Productos
+    getAllProducts: () => {
+      log("Llamando a getAllProducts");
+      return ipcRenderer.invoke("get-all-products");
+    },
+    getProductById: (id) => {
+      log("Llamando a getProductById:", id);
+      return ipcRenderer.invoke("get-product-by-id", id);
+    },
+    getProductByBarcode: (barcode) => {
+      log("Llamando a getProductByBarcode:", barcode);
+      return ipcRenderer.invoke("get-product-by-barcode", barcode);
+    },
+    createProduct: (productData) => {
+      log("Llamando a createProduct");
+      return ipcRenderer.invoke("create-product", productData);
+    },
+    updateProduct: (id, productData) => {
+      log("Llamando a updateProduct - ID:", id);
+      return ipcRenderer.invoke("update-product", { id, productData });
+    },
+    deleteProduct: (id) => {
+      log("Llamando a deleteProduct:", id);
+      return ipcRenderer.invoke("delete-product", id);
+    },
+    searchProducts: (query) => {
+      log("Llamando a searchProducts:", query);
+      return ipcRenderer.invoke("search-products", query);
+    },
+
+    // Categorías
+    getAllCategories: () => {
+      log("Llamando a getAllCategories");
+      return ipcRenderer.invoke("get-all-categories");
+    },
+    getCategoryById: (id) => {
+      log("Llamando a getCategoryById:", id);
+      return ipcRenderer.invoke("get-category-by-id", id);
+    },
+    createCategory: (categoryData) => {
+      log("Llamando a createCategory");
+      return ipcRenderer.invoke("create-category", categoryData);
+    },
+    updateCategory: (id, categoryData) => {
+      log("Llamando a updateCategory - ID:", id);
+      return ipcRenderer.invoke("update-category", { id, categoryData });
+    },
+    deleteCategory: (id) => {
+      log("Llamando a deleteCategory:", id);
+      return ipcRenderer.invoke("delete-category", id);
+    },
+  });
+
+  log("preload.js inicializado correctamente");
+} catch (error) {
+  console.error("[Preload] Error al inicializar:", error);
+}

@@ -1,28 +1,69 @@
 import React from 'react';
 import '../styles/InventoryStats.css';
 
-function InventoryStats({ products, categories }) {
+function InventoryStats({ products = [], categories = [] }) {
+  console.log("InventoryStats recibió:", { 
+    productsCount: products?.length || 0, 
+    categoriesCount: categories?.length || 0 
+  });
+
+  // Verificar datos válidos
+  if (!Array.isArray(products) || !Array.isArray(categories)) {
+    console.error("Datos inválidos recibidos en InventoryStats:", { products, categories });
+    return (
+      <div className="inventory-stats-container error">
+        <h2 className="stats-header">Error en Estadísticas</h2>
+        <p>No se pudieron cargar las estadísticas correctamente. Por favor, intente nuevamente.</p>
+      </div>
+    );
+  }
+
+  // Si no hay productos, mostrar mensaje
+  if (products.length === 0) {
+    return (
+      <div className="inventory-stats-container empty">
+        <h2 className="stats-header">Estadísticas de Inventario</h2>
+        <p>No hay productos en el inventario para mostrar estadísticas.</p>
+      </div>
+    );
+  }
+
   // Calcula el valor total del inventario
   const totalInventoryValue = products.reduce((total, product) => {
-    return total + (product.price * product.stock);
+    const price = parseFloat(product.price) || 0;
+    const stock = parseInt(product.stock) || 0;
+    return total + (price * stock);
   }, 0);
 
   // Encuentra el producto más caro
   const mostExpensiveProduct = products.reduce((mostExpensive, current) => {
-    return (current.price > (mostExpensive?.price || 0)) ? current : mostExpensive;
+    const currentPrice = parseFloat(current.price) || 0;
+    const mostExpensivePrice = parseFloat(mostExpensive?.price) || 0;
+    return (currentPrice > mostExpensivePrice) ? current : mostExpensive;
   }, null);
 
   // Encuentra el producto con más stock
   const mostStockedProduct = products.reduce((mostStock, current) => {
-    return (current.stock > (mostStock?.stock || 0)) ? current : mostStock;
+    const currentStock = parseInt(current.stock) || 0;
+    const mostStockValue = parseInt(mostStock?.stock) || 0;
+    return (currentStock > mostStockValue) ? current : mostStock;
   }, null);
   
   // Encuentra productos con bajo stock (menos de 5 unidades)
-  const lowStockProducts = products.filter(product => product.stock < 5);
+  const lowStockProducts = products.filter(product => {
+    const stock = parseInt(product.stock) || 0;
+    return stock < 5;
+  });
   
   // Calcula productos por categoría
   const productsByCategory = categories.map(category => {
-    const count = products.filter(p => p.CategoryId === category.id).length;
+    // Asegurarse de que los ID se estén comparando correctamente (como números)
+    const count = products.filter(p => {
+      const productCategoryId = typeof p.CategoryId === 'string' ? parseInt(p.CategoryId) : p.CategoryId;
+      const categoryId = typeof category.id === 'string' ? parseInt(category.id) : category.id;
+      return productCategoryId === categoryId;
+    }).length;
+    
     return {
       id: category.id,
       name: category.name,
@@ -70,7 +111,7 @@ function InventoryStats({ products, categories }) {
         {mostExpensiveProduct && (
           <div className="stat-card most-expensive">
             <h3>Producto Más Caro</h3>
-            <div className="stat-value">${mostExpensiveProduct.price.toFixed(2)}</div>
+            <div className="stat-value">${parseFloat(mostExpensiveProduct.price).toFixed(2)}</div>
             <div className="stat-description">{mostExpensiveProduct.name}</div>
           </div>
         )}

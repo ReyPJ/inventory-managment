@@ -1,10 +1,28 @@
 // No podemos importar ipcRenderer directamente en el renderer process
 // Usamos la API expuesta por el preload.js a través de contextBridge
 
+// Verificar si la API de Electron está disponible
+const electronAPI = window.electronAPI;
+
+// Si la API no está disponible, proporcionar una implementación mock para desarrollo/pruebas
+if (!electronAPI) {
+  console.warn("API de Electron no disponible. Usando implementación mock para desarrollo.");
+}
+
+// Helper function para manejar llamadas seguras a la API de Electron
+const callAPI = (methodName, ...args) => {
+  if (electronAPI && typeof electronAPI[methodName] === 'function') {
+    return electronAPI[methodName](...args);
+  } else {
+    console.error(`Método ${methodName} no disponible en electronAPI`);
+    return Promise.reject(new Error(`Método ${methodName} no disponible`));
+  }
+};
+
 // Productos
 export const getAllProducts = async () => {
   try {
-    const result = await window.api.getAllProducts();
+    const result = await callAPI('getAllProducts');
     return result || [];
   } catch (error) {
     console.error("Error en getAllProducts:", error);
@@ -19,20 +37,7 @@ export const getAllProducts = async () => {
  */
 export const getProductById = async (id) => {
   try {
-    // En producción, esto enviaría un mensaje IPC a la parte principal de Electron
-    // En desarrollo, simulamos el acceso a la base de datos
-
-    // Simulación de búsqueda en la base de datos
-    const allProducts = await getAllProducts();
-    const product = allProducts.find((p) => p.id === id);
-
-    if (product) {
-      // Simulamos un pequeño retraso para simular acceso a la base de datos
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      return product;
-    }
-
-    return null;
+    return await callAPI('getProductById', id);
   } catch (error) {
     console.error("Error al obtener producto por ID:", error);
     throw new Error("Error al obtener producto por ID");
@@ -41,8 +46,7 @@ export const getProductById = async (id) => {
 
 export const getProductByBarcode = async (barcode) => {
   try {
-    const result = await window.api.getProductByBarcode(barcode);
-    return result;
+    return await callAPI('getProductByBarcode', barcode);
   } catch (error) {
     console.error("Error en getProductByBarcode:", error);
     return null;
@@ -51,36 +55,34 @@ export const getProductByBarcode = async (barcode) => {
 
 export const createProduct = async (productData) => {
   try {
-    const result = await window.api.createProduct(productData);
-    return result;
+    return await callAPI('createProduct', productData);
   } catch (error) {
     console.error("Error en createProduct:", error);
-    throw error;
+    return null;
   }
 };
 
 export const updateProduct = async (id, productData) => {
   try {
-    const result = await window.api.updateProduct(id, productData);
-    return result;
+    return await callAPI('updateProduct', id, productData);
   } catch (error) {
     console.error("Error en updateProduct:", error);
-    throw error;
+    return null;
   }
 };
 
 export const deleteProduct = async (id) => {
   try {
-    return await window.api.deleteProduct(id);
+    return await callAPI('deleteProduct', id);
   } catch (error) {
     console.error("Error en deleteProduct:", error);
-    return false;
+    return null;
   }
 };
 
 export const searchProducts = async (query) => {
   try {
-    const result = await window.api.searchProducts(query);
+    const result = await callAPI('searchProducts', query);
     return result || [];
   } catch (error) {
     console.error("Error en searchProducts:", error);
@@ -91,7 +93,7 @@ export const searchProducts = async (query) => {
 // Categorias
 export const getAllCategories = async () => {
   try {
-    const result = await window.api.getAllCategories();
+    const result = await callAPI('getAllCategories');
     return result || [];
   } catch (error) {
     console.error("Error en getAllCategories:", error);
@@ -101,8 +103,7 @@ export const getAllCategories = async () => {
 
 export const getCategoryById = async (id) => {
   try {
-    const result = await window.api.getCategoryById(id);
-    return result;
+    return await callAPI('getCategoryById', id);
   } catch (error) {
     console.error("Error en getCategoryById:", error);
     return null;
@@ -111,29 +112,27 @@ export const getCategoryById = async (id) => {
 
 export const createCategory = async (categoryData) => {
   try {
-    const result = await window.api.createCategory(categoryData);
-    return result;
+    return await callAPI('createCategory', categoryData);
   } catch (error) {
     console.error("Error en createCategory:", error);
-    throw error;
+    return null;
   }
 };
 
 export const updateCategory = async (id, categoryData) => {
   try {
-    const result = await window.api.updateCategory(id, categoryData);
-    return result;
+    return await callAPI('updateCategory', id, categoryData);
   } catch (error) {
     console.error("Error en updateCategory:", error);
-    throw error;
+    return null;
   }
 };
 
 export const deleteCategory = async (id) => {
   try {
-    return await window.api.deleteCategory(id);
+    return await callAPI('deleteCategory', id);
   } catch (error) {
     console.error("Error en deleteCategory:", error);
-    return false;
+    return null;
   }
 };

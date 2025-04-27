@@ -1,17 +1,64 @@
-const { contextBridge: r, ipcRenderer: t } = require("electron");
-r.exposeInMainWorld("api", {
-  // Productos
-  getAllProducts: () => t.invoke("get-all-products"),
-  getProductById: (e) => t.invoke("get-product-by-id", e),
-  getProductByBarcode: (e) => t.invoke("get-product-by-barcode", e),
-  createProduct: (e) => t.invoke("create-product", e),
-  updateProduct: (e, o) => t.invoke("update-product", { id: e, productData: o }),
-  deleteProduct: (e) => t.invoke("delete-product", e),
-  searchProducts: (e) => t.invoke("search-products", e),
-  // Categorías
-  getAllCategories: () => t.invoke("get-all-categories"),
-  getCategoryById: (e) => t.invoke("get-category-by-id", e),
-  createCategory: (e) => t.invoke("create-category", e),
-  updateCategory: (e, o) => t.invoke("update-category", { id: e, categoryData: o }),
-  deleteCategory: (e) => t.invoke("delete-category", e)
-});
+"use strict";
+const { contextBridge, ipcRenderer } = require ? require("electron") : window.electron;
+const log = (msg, ...args) => {
+  console.log(`[Preload] ${msg}`, ...args);
+};
+try {
+  log("Inicializando preload.js");
+  contextBridge.exposeInMainWorld("electronAPI", {
+    // Productos
+    getAllProducts: () => {
+      log("Llamando a getAllProducts");
+      return ipcRenderer.invoke("get-all-products");
+    },
+    getProductById: (id) => {
+      log("Llamando a getProductById:", id);
+      return ipcRenderer.invoke("get-product-by-id", id);
+    },
+    getProductByBarcode: (barcode) => {
+      log("Llamando a getProductByBarcode:", barcode);
+      return ipcRenderer.invoke("get-product-by-barcode", barcode);
+    },
+    createProduct: (productData) => {
+      log("Llamando a createProduct");
+      return ipcRenderer.invoke("create-product", productData);
+    },
+    updateProduct: (id, productData) => {
+      log("Llamando a updateProduct - ID:", id);
+      return ipcRenderer.invoke("update-product", { id, productData });
+    },
+    deleteProduct: (id) => {
+      log("Llamando a deleteProduct:", id);
+      return ipcRenderer.invoke("delete-product", id);
+    },
+    searchProducts: (query) => {
+      log("Llamando a searchProducts:", query);
+      return ipcRenderer.invoke("search-products", query);
+    },
+    // Categorías
+    getAllCategories: () => {
+      log("Llamando a getAllCategories");
+      return ipcRenderer.invoke("get-all-categories");
+    },
+    getCategoryById: (id) => {
+      log("Llamando a getCategoryById:", id);
+      return ipcRenderer.invoke("get-category-by-id", id);
+    },
+    createCategory: (categoryData) => {
+      log("Llamando a createCategory");
+      return ipcRenderer.invoke("create-category", categoryData);
+    },
+    updateCategory: (id, categoryData) => {
+      log("Llamando a updateCategory - ID:", id);
+      return ipcRenderer.invoke("update-category", { id, categoryData });
+    },
+    deleteCategory: (id) => {
+      log("Llamando a deleteCategory:", id);
+      return ipcRenderer.invoke("delete-category", id);
+    }
+  });
+  log("preload.js inicializado correctamente");
+} catch (error) {
+  console.error("[Preload] Error al inicializar:", error);
+}
+//# sourceMappingURL=preload.js.map
