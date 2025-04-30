@@ -57,19 +57,23 @@ function App() {
   const loadData = async () => {
     setLoading(true);
     try {
+      console.log("🔍 Cargando productos activos...");
       // Usar getAllActiveProducts para excluir productos eliminados localmente
       const productsData = await getAllActiveProducts();
+      console.log(`✅ Productos cargados: ${productsData.length}`, productsData);
       setProducts(productsData);
       
+      console.log("🔍 Cargando categorías...");
       const categoriesData = await getAllCategories();
+      console.log(`✅ Categorías cargadas: ${categoriesData.length}`, categoriesData);
       setCategories(categoriesData);
       
       // Verificar si hay configuración de sincronización
       loadSavedConfig();
     } catch (err) {
+      console.error("❌ ERROR AL CARGAR DATOS:", err);
       setError(err.message || 'Error al cargar datos');
       toast.error('Error al cargar datos');
-      console.error('Error al cargar datos:', err);
     } finally {
       setLoading(false);
     }
@@ -111,23 +115,34 @@ function App() {
   // Filtrar por categoría
   useEffect(() => {
     const filterProductsByCategory = async () => {
+      console.log(`🔍 Filtrando por categoría: ${selectedCategory === 'all' ? 'Todas' : 'ID: ' + selectedCategory}`);
+      
       if (selectedCategory === 'all') {
         // Si es "todas las categorías", simplemente recargamos
-        if (!searchTerm) loadData();
+        console.log("📋 Cargando todos los productos...");
+        if (!searchTerm) {
+          await loadData();
+          console.log("🔄 loadData() ejecutado para 'Todas las categorías'");
+        }
         return;
       }
       
       try {
         setLoading(true);
         setError(null);
-        // Cargamos todos y filtramos en el cliente (alternativa: crear endpoint específico)
-        const allProducts = await getAllProducts();
+        // Cargamos todos y filtramos en el cliente
+        console.log("📋 Obteniendo todos los productos activos para filtrar...");
+        const allProducts = await getAllActiveProducts();
+        console.log(`📦 Productos obtenidos: ${allProducts.length}`);
+        
         const filtered = allProducts.filter(
           product => product.CategoryId === parseInt(selectedCategory)
         );
+        console.log(`🔍 Productos filtrados: ${filtered.length} para categoría ID: ${selectedCategory}`);
+        
         setProducts(filtered || []);
       } catch (error) {
-        console.error('Error filtrando productos:', error);
+        console.error('❌ Error filtrando productos:', error);
         setError('Error al filtrar productos. Por favor, intenta nuevamente.');
         toast.error('Error al filtrar por categoría', {
           autoClose: false

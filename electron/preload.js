@@ -8,7 +8,22 @@ const log = (msg, ...args) => {
   console.log(`[Preload] ${msg}`, ...args);
 };
 
+// Agregar diagnóstico cuando se inicia la aplicación
+console.log("🔍 [DIAGNÓSTICO] Preload script iniciado");
+
 try {
+  console.log("🔍 [DIAGNÓSTICO] Entorno:", process.env.NODE_ENV);
+  console.log("🔍 [DIAGNÓSTICO] Plataforma:", process.platform);
+  console.log("🔍 [DIAGNÓSTICO] Versión de Electron:", process.versions.electron);
+  console.log("🔍 [DIAGNÓSTICO] Versión de Node:", process.versions.node);
+  console.log("🔍 [DIAGNÓSTICO] Directorio de ejecución:", process.cwd());
+  
+  if (process.env.APPDATA) {
+    console.log("🔍 [DIAGNÓSTICO] Directorio APPDATA:", process.env.APPDATA);
+    console.log("🔍 [DIAGNÓSTICO] Ruta probable de la base de datos:", 
+      require('path').join(process.env.APPDATA, 'sistema-inventario', 'inventory-database.sqlite'));
+  }
+
   log("Inicializando preload.js");
 
   // Intentar exponer la API a través de contextBridge

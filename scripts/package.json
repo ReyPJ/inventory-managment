@@ -1,0 +1,15 @@
+{
+  "name": "inventory-db-migration",
+  "version": "1.0.0",
+  "description": "Script de migración para base de datos de inventario",
+  "type": "module",
+  "main": "migrate-database.js",
+  "scripts": {
+    "migrate": "node migrate-database.js",
+    "update-structure": "node update-database-structure.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.9.1",
+    "sqlite3": "^5.1.7"
+  }
+} 

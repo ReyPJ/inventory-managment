@@ -2,9 +2,14 @@
 // Preload script siguiendo las mejores prácticas de seguridad para Electron
 const { contextBridge, ipcRenderer } = require("electron");
 
+// Diagnóstico para preload-simple.js
+console.log("🔍 [DIAGNÓSTICO] preload-simple.js iniciado");
+console.log("🔍 [DIAGNÓSTICO] Entorno:", process.env.NODE_ENV);
+
 // Lista de canales válidos para enviar/recibir por IPC
 const validSendChannels = [
   "get-all-products",
+  "get-all-active-products",
   "get-product-by-id",
   "get-product-by-barcode",
   "create-product",
@@ -16,12 +21,15 @@ const validSendChannels = [
   "create-category",
   "update-category",
   "delete-category",
+  "update-products-after-sync",
+  "purge-deleted-products",
 ];
 
 // Exponer solo APIs específicas y controladas al proceso de renderizado
 contextBridge.exposeInMainWorld("electronAPI", {
   // Productos
   getAllProducts: () => ipcRenderer.invoke("get-all-products"),
+  getAllActiveProducts: () => ipcRenderer.invoke("get-all-active-products"),
   getProductById: (id) => ipcRenderer.invoke("get-product-by-id", id),
   getProductByBarcode: (barcode) =>
     ipcRenderer.invoke("get-product-by-barcode", barcode),
@@ -31,6 +39,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-product", { id, productData }),
   deleteProduct: (id) => ipcRenderer.invoke("delete-product", id),
   searchProducts: (query) => ipcRenderer.invoke("search-products", query),
+  
+  // Funciones para sincronización
+  updateProductsAfterSync: (syncResults) => 
+    ipcRenderer.invoke("update-products-after-sync", syncResults),
+  purgeDeletedProducts: () => 
+    ipcRenderer.invoke("purge-deleted-products"),
 
   // Categorías
   getAllCategories: () => ipcRenderer.invoke("get-all-categories"),
@@ -41,3 +55,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-category", { id, categoryData }),
   deleteCategory: (id) => ipcRenderer.invoke("delete-category", id),
 });
+
+console.log("✅ [DIAGNÓSTICO] preload-simple.js cargado correctamente");
