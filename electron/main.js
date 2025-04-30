@@ -463,6 +463,31 @@ function setupIpcHandlers() {
     }
   });
 
+  // Nuevos manejadores para sincronización de categorías
+  ipcMain.handle("update-categories-after-sync", async (_, syncResults) => {
+    try {
+      console.log("Manejador: Actualizando categorías después de sincronización");
+      const result = await categoryApi.updateCategoriesAfterSync(syncResults);
+      console.log("Resultado de actualización de categorías post-sincronización:", result);
+      return result;
+    } catch (error) {
+      console.error("Error al actualizar categorías después de sincronización:", error);
+      return { updated: 0, added: 0, skipped: 0 };
+    }
+  });
+
+  ipcMain.handle("purge-deleted-categories", async () => {
+    try {
+      console.log("Manejador: Purgando categorías eliminadas");
+      const count = await categoryApi.purgeDeletedCategories();
+      console.log("Categorías purgadas:", count);
+      return count;
+    } catch (error) {
+      console.error("Error al purgar categorías eliminadas:", error);
+      return 0;
+    }
+  });
+
   console.log("Manejadores IPC configurados correctamente");
 }
 

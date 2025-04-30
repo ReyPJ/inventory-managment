@@ -7,7 +7,7 @@ import {
   fullSyncProcess,
   getLastSyncTime
 } from "../utils/syncService";
-import { getAllProducts } from "../utils/ipcRenderer";
+import { getAllProducts, getAllCategories } from "../utils/ipcRenderer";
 import "../styles/SyncSettings.css";
 
 function SyncSettings({ onSyncComplete }) {
@@ -97,13 +97,17 @@ function SyncSettings({ onSyncComplete }) {
     try {
       // Obtener todos los productos locales
       const localProducts = await getAllProducts();
-      setSyncStatus(`Obtenidos ${localProducts.length} productos locales. Sincronizando...`);
+      
+      // Obtener todas las categorías locales
+      const localCategories = await getAllCategories();
+      
+      setSyncStatus(`Obtenidos ${localProducts.length} productos y ${localCategories.length} categorías locales. Sincronizando...`);
       
       // Ejecutar el proceso de sincronización completo
-      const result = await fullSyncProcess(localProducts);
+      const result = await fullSyncProcess(localProducts, localCategories);
       
       if (result.success) {
-        setSyncStatus(`Sincronización completada. ${result.serverProducts.length} productos recibidos.`);
+        setSyncStatus(`Sincronización completada. ${result.serverProducts.length} productos y ${result.serverCategories?.length || 0} categorías recibidas.`);
         setLastSync(getLastSyncTime());
         
         // Actualizar la fecha de última sincronización en localStorage

@@ -17,6 +17,9 @@ let syncConfig = {
 // Cache para almacenar productos eliminados localmente
 const locallyDeletedProducts = new Set();
 
+// Cache para almacenar categorías eliminadas localmente
+const locallyDeletedCategories = new Set();
+
 /**
  * Inicializa el servicio de sincronización con la API key del tenant
  * @param {string} apiKey - API key del tenant (cs_* para Casa, ng_* para Negocio)
@@ -165,19 +168,23 @@ export const getSyncConfig = () => {
 /**
  * Proceso completo de sincronización en dos pasos
  * @param {Array} localProducts - Productos locales
+ * @param {Array} localCategories - Categorías locales
  * @returns {Promise<Object>} - Resultado de la sincronización
  */
-export const fullSyncProcess = async (localProducts) => {
+export const fullSyncProcess = async (localProducts, localCategories = []) => {
   if (!syncConfig.isConfigured) {
     throw new Error("El servicio de sincronización no está configurado");
   }
 
   try {
-    // PASO 1: Obtener productos del servidor
+    // PASO 1: Obtener productos y categorías del servidor
     const serverProducts = await getServerProducts();
+    const serverCategories = await getServerCategories();
+    
     console.log(`Obtenidos ${serverProducts.length} productos del servidor`);
+    console.log(`Obtenidas ${serverCategories.length} categorías del servidor`);
 
-    // Obtener productos eliminados localmente (todos sus detalles, no solo los IDs)
+    // Sincronizar productos
     const deletedProducts = localProducts.filter((p) => p.deletedLocally);
     const deletedBarcodes = deletedProducts.map((p) => p.barcode);
 
@@ -200,32 +207,83 @@ export const fullSyncProcess = async (localProducts) => {
       filteredServerProducts
     );
 
-    // Obtener todos los IDs conocidos (excluyendo eliminados)
-    const allKnownIds = allKnownProducts
+    // Obtener todos los IDs de productos conocidos (excluyendo eliminados)
+    const allKnownProductIds = allKnownProducts
       .map((p) => p.id)
       .filter((id) => id !== undefined);
+      
+    // Sincronizar categorías
+    const deletedCategories = localCategories.filter((c) => c.deletedLocally);
+    const deletedCategoryIds = deletedCategories.map((c) => c.id);
+    
+    console.log(
+      `Categorías marcadas como eliminadas localmente: ${deletedCategoryIds.length}`
+    );
+    
+    // Filtrar categorías del servidor que no han sido eliminadas localmente
+    const filteredServerCategories = serverCategories.filter(
+      (category) => !deletedCategoryIds.includes(category.id)
+    );
+    
+    console.log(
+      `Categorías filtradas del servidor después de excluir eliminadas: ${filteredServerCategories.length}`
+    );
+    
+    // Combinar categorías del servidor con categorías locales
+    const allKnownCategories = mergeCategories(
+      localCategories.filter((c) => !c.deletedLocally),
+      filteredServerCategories
+    );
+    
+    // Obtener todos los IDs de categorías conocidas (excluyendo eliminadas)
+    const allKnownCategoryIds = allKnownCategories
+      .map((c) => c.id)
+      .filter((id) => id !== undefined);
 
-    // PASO 2: Enviar sincronización con la lista filtrada de IDs
-    const syncResult = await syncProducts(
+    // PASO 2: Enviar sincronización con las listas filtradas de IDs
+    const productSyncResult = await syncProducts(
       // Solo enviamos los productos modificados localmente y no eliminados
       localProducts.filter((p) => p.modified && !p.deletedLocally),
-      allKnownIds
+      allKnownProductIds
+    );
+    
+    // Filtrar categorías modificadas para sincronizar
+    const categoriesToSync = localCategories.filter((c) => c.modified && !c.deletedLocally);
+    console.log(`Categorías modificadas para sincronizar: ${categoriesToSync.length}`);
+    
+    // Si no hay categorías modificadas pero hay categorías locales, forzar la sincronización de todas
+    // Esto asegura que en la primera sincronización todas las categorías se envíen al servidor
+    let categoriesToSend = categoriesToSync;
+    if (categoriesToSync.length === 0 && localCategories.length > 0) {
+      console.log(`No hay categorías modificadas, pero hay ${localCategories.length} categorías locales. Forzando sincronización de todas las categorías.`);
+      categoriesToSend = localCategories.filter(c => !c.deletedLocally);
+      console.log(`Enviando ${categoriesToSend.length} categorías no eliminadas al servidor`);
+    }
+    
+    // Ahora sincronizamos las categorías con el servidor
+    const categorySyncResult = await syncCategories(
+      categoriesToSend,
+      allKnownCategoryIds
     );
 
     // Actualizar timestamp de última sincronización
     syncConfig.lastSyncTime = new Date().toISOString();
     saveConfig();
 
-    // Limpiar lista de productos eliminados localmente si la sincronización fue exitosa
-    if (syncResult) {
+    // Limpiar listas de elementos eliminados localmente si la sincronización fue exitosa
+    if (productSyncResult && categorySyncResult) {
       locallyDeletedProducts.clear();
+      locallyDeletedCategories.clear();
     }
 
     return {
       success: true,
       serverProducts: filteredServerProducts,
-      syncedProducts: syncResult,
-      deletedBarcodes: deletedBarcodes, // Incluimos esta información para registro
+      syncedProducts: productSyncResult,
+      deletedBarcodes: deletedBarcodes,
+      serverCategories: filteredServerCategories,
+      syncedCategories: categorySyncResult,
+      deletedCategoryIds: deletedCategoryIds,
     };
   } catch (error) {
     console.error("Error en proceso de sincronización completa:", error);
@@ -369,4 +427,100 @@ export const TENANTS = {
     name: "Negocio",
     apiKey: "ng_3e5f91d082a649d7bc408e71af26de59",
   },
+};
+
+/**
+ * Obtiene todas las categorías del servidor
+ * @returns {Promise<Array>} - Lista de categorías del servidor
+ */
+const getServerCategories = async () => {
+  try {
+    const response = await fetch(`${syncConfig.apiUrl}/categories/`, {
+      headers: {
+        "X-API-Key": syncConfig.apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error al obtener categorías: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error al obtener categorías del servidor:", error);
+    throw error;
+  }
+};
+
+/**
+ * Sincroniza categorías con el servidor
+ * @param {Array} categories - Categorías modificadas para sincronizar
+ * @param {Array} allKnownIds - Lista de todos los IDs conocidos (para control de eliminaciones)
+ * @returns {Promise<Object>} - Resultado de la sincronización
+ */
+const syncCategories = async (categories, allKnownIds) => {
+  try {
+    const response = await fetch(`${syncConfig.apiUrl}/sync/categories/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": syncConfig.apiKey,
+      },
+      body: JSON.stringify({
+        categories: categories,
+        ids: {
+          ids: allKnownIds,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error al sincronizar categorías: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error al sincronizar categorías:", error);
+    throw error;
+  }
+};
+
+/**
+ * Combina categorías locales y del servidor
+ * @param {Array} localCategories - Categorías locales
+ * @param {Array} serverCategories - Categorías del servidor
+ * @returns {Array} - Lista combinada de categorías
+ */
+const mergeCategories = (localCategories, serverCategories) => {
+  // Crear un mapa de categorías locales indexadas por nombre
+  const localCategoryMap = {};
+  localCategories.forEach((category) => {
+    localCategoryMap[category.name] = category;
+  });
+
+  // Combinar con categorías del servidor
+  const result = [...localCategories];
+
+  // Agregar categorías del servidor que no existen localmente
+  serverCategories.forEach((serverCategory) => {
+    if (!localCategoryMap[serverCategory.name]) {
+      // Es una categoría nueva del servidor
+      result.push({
+        ...serverCategory,
+        synced: true, // Marcarla como sincronizada
+      });
+    }
+  });
+
+  return result;
+};
+
+/**
+ * Marca una categoría como eliminada localmente
+ * @param {number} categoryId - ID de la categoría a marcar como eliminada
+ */
+export const markCategoryAsDeleted = (categoryId) => {
+  if (!categoryId) return;
+  locallyDeletedCategories.add(categoryId);
+  console.log(`Categoría ID ${categoryId} marcada como eliminada localmente`);
 };

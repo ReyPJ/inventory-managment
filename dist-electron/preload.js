@@ -80,6 +80,15 @@ try {
     deleteCategory: (id) => {
       log("Llamando a deleteCategory:", id);
       return ipcRenderer.invoke("delete-category", id);
+    },
+    // Nuevos métodos para sincronización de categorías
+    updateCategoriesAfterSync: (syncResults) => {
+      log("Llamando a updateCategoriesAfterSync");
+      return ipcRenderer.invoke("update-categories-after-sync", syncResults);
+    },
+    purgeDeletedCategories: () => {
+      log("Llamando a purgeDeletedCategories");
+      return ipcRenderer.invoke("purge-deleted-categories");
     }
   });
   log("preload.js inicializado correctamente");

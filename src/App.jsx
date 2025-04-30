@@ -11,7 +11,9 @@ import {
   updateCategory,
   deleteCategory,
   updateProductsAfterSync,
-  purgeDeletedProducts
+  purgeDeletedProducts,
+  updateCategoriesAfterSync,
+  purgeDeletedCategories
 } from './utils/ipcRenderer';
 import './styles/App.css';
 import ProductForm from './components/ProductForm';
@@ -760,10 +762,20 @@ function App() {
         // Actualizar productos locales con los datos del servidor
         const updateResult = await updateProductsAfterSync(result);
         
-        // Eliminar físicamente los productos marcados como eliminados
-        const purgedCount = await purgeDeletedProducts();
+        // Actualizar categorías locales con los datos del servidor
+        const categoryUpdateResult = await updateCategoriesAfterSync(result);
         
-        toast.success(`Sincronización completada: ${updateResult.updated} actualizados, ${updateResult.added} agregados, ${updateResult.skipped || 0} omitidos, ${purgedCount} purgados`);
+        // Eliminar físicamente los productos marcados como eliminados
+        const purgedProductsCount = await purgeDeletedProducts();
+        
+        // Eliminar físicamente las categorías marcadas como eliminadas
+        const purgedCategoriesCount = await purgeDeletedCategories();
+        
+        toast.success(
+          `Sincronización completada:\n` +
+          `Productos: ${updateResult.updated} actualizados, ${updateResult.added} agregados, ${updateResult.skipped || 0} omitidos, ${purgedProductsCount} purgados\n` +
+          `Categorías: ${categoryUpdateResult?.updated || 0} actualizadas, ${categoryUpdateResult?.added || 0} agregadas, ${categoryUpdateResult?.skipped || 0} omitidas, ${purgedCategoriesCount || 0} purgadas`
+        );
         
         // Recargar los datos para reflejar los cambios
         await loadData();

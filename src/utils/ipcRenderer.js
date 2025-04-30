@@ -168,3 +168,23 @@ export const purgeDeletedProducts = async () => {
     return 0;
   }
 };
+
+// Nuevas funciones para soportar sincronización de categorías
+export const updateCategoriesAfterSync = async (syncResults) => {
+  try {
+    return await callAPI("updateCategoriesAfterSync", syncResults);
+  } catch (error) {
+    console.error("Error en updateCategoriesAfterSync:", error);
+    // Devolver un objeto similar a updateProductsAfterSync para consistencia
+    return { updated: 0, added: 0, skipped: 0 };
+  }
+};
+
+export const purgeDeletedCategories = async () => {
+  try {
+    return await callAPI("purgeDeletedCategories");
+  } catch (error) {
+    console.error("Error en purgeDeletedCategories:", error);
+    return 0;
+  }
+};
