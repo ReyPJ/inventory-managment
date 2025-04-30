@@ -16,6 +16,18 @@ const Category = sequelize.define("Category", {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  synced: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  modified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
+  deletedLocally: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
 });
 
 export default Category;

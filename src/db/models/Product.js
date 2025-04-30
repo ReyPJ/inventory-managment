@@ -54,6 +54,14 @@ const Product = sequelize.define("Product", {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
+  CategoryId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'Categories',
+      key: 'id'
+    }
+  }
 });
 
 export default Product;

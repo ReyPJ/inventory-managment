@@ -894,6 +894,14 @@ const Product = sequelize.define("Product", {
   remoteId: {
     type: DataTypes.INTEGER,
     allowNull: true
+  },
+  CategoryId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: "Categories",
+      key: "id"
+    }
   }
 });
 const Category = sequelize.define("Category", {
@@ -910,6 +918,18 @@ const Category = sequelize.define("Category", {
   description: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  synced: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  modified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
+  deletedLocally: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   }
 });
 Category.hasMany(Product);
@@ -931,11 +951,34 @@ async function initDatabase() {
   }
 }
 const locallyDeletedProducts = /* @__PURE__ */ new Set();
+const locallyDeletedCategories = /* @__PURE__ */ new Set();
 const markProductAsDeleted = (productId) => {
   if (!productId) return;
   locallyDeletedProducts.add(productId);
   console.log(`Producto ID ${productId} marcado como eliminado localmente`);
 };
+const markCategoryAsDeleted = (categoryId) => {
+  if (!categoryId) {
+    console.error("No se puede marcar como eliminada una categoría sin ID");
+    return;
+  }
+  const numericId = Number(categoryId);
+  locallyDeletedCategories.add(numericId);
+  console.log(`Categoría ID ${numericId} marcada como eliminada localmente`);
+  console.log(`Estado actual de categorías eliminadas: ${Array.from(locallyDeletedCategories)}`);
+  try {
+    const deletedIds = Array.from(locallyDeletedCategories);
+    localStorage.setItem("locallyDeletedCategoryIds", JSON.stringify(deletedIds));
+    console.log(`IDs de categorías eliminadas guardados en localStorage: ${deletedIds}`);
+  } catch (error) {
+    console.error("Error guardando IDs de categorías eliminadas:", error);
+  }
+};
+const syncService = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  markCategoryAsDeleted,
+  markProductAsDeleted
+}, Symbol.toStringTag, { value: "Module" }));
 const toJSON$1 = (data) => {
   return data ? JSON.parse(JSON.stringify(data)) : null;
 };
@@ -1068,20 +1111,78 @@ async function updateProductsAfterSync(syncResults) {
     let updated = 0;
     let added = 0;
     let skipped = 0;
-    if (syncedProducts && Array.isArray(syncedProducts)) {
-      for (const syncedProduct of syncedProducts) {
-        const localProduct = await Product.findOne({
-          where: { barcode: syncedProduct.barcode }
-        });
-        if (localProduct) {
-          await localProduct.update({
-            synced: true,
-            modified: false,
-            lastSync: /* @__PURE__ */ new Date(),
-            syncError: null,
-            remoteId: syncedProduct.id
+    const categoriesMap = {};
+    try {
+      const allCategories = await Category.findAll();
+      allCategories.forEach((category) => {
+        categoriesMap[category.id] = category;
+      });
+      console.log(`Categorías disponibles en BD local: ${Object.keys(categoriesMap).length}`);
+      console.log(`IDs de categorías: ${Object.keys(categoriesMap).join(", ")}`);
+    } catch (error) {
+      console.error("Error al obtener categorías para el mapa:", error);
+    }
+    if (syncedProducts && syncedProducts.created && Array.isArray(syncedProducts.created)) {
+      console.log(`Procesando ${syncedProducts.created.length} productos creados`);
+      for (const syncedProduct of syncedProducts.created) {
+        try {
+          const localProduct = await Product.findOne({
+            where: { barcode: syncedProduct.barcode }
           });
-          updated++;
+          if (localProduct) {
+            const updateData = {
+              synced: true,
+              modified: false,
+              lastSync: /* @__PURE__ */ new Date(),
+              syncError: null,
+              remoteId: syncedProduct.id
+            };
+            if (syncedProduct.CategoryId || syncedProduct.category_id) {
+              const categoryId = syncedProduct.CategoryId || syncedProduct.category_id;
+              if (categoriesMap[categoryId]) {
+                console.log(`Asignando categoría ${categoryId} a producto ${syncedProduct.name}`);
+                updateData.CategoryId = categoryId;
+              } else {
+                console.log(`Categoría ${categoryId} no encontrada para producto ${syncedProduct.name}`);
+              }
+            }
+            await localProduct.update(updateData);
+            updated++;
+          }
+        } catch (error) {
+          console.error(`Error al actualizar producto creado ${syncedProduct.barcode}:`, error);
+        }
+      }
+    }
+    if (syncedProducts && syncedProducts.updated && Array.isArray(syncedProducts.updated)) {
+      console.log(`Procesando ${syncedProducts.updated.length} productos actualizados`);
+      for (const syncedProduct of syncedProducts.updated) {
+        try {
+          const localProduct = await Product.findOne({
+            where: { barcode: syncedProduct.barcode }
+          });
+          if (localProduct) {
+            const updateData = {
+              synced: true,
+              modified: false,
+              lastSync: /* @__PURE__ */ new Date(),
+              syncError: null,
+              remoteId: syncedProduct.id
+            };
+            if (syncedProduct.CategoryId || syncedProduct.category_id) {
+              const categoryId = syncedProduct.CategoryId || syncedProduct.category_id;
+              if (categoriesMap[categoryId]) {
+                console.log(`Asignando categoría ${categoryId} a producto ${syncedProduct.name}`);
+                updateData.CategoryId = categoryId;
+              } else {
+                console.log(`Categoría ${categoryId} no encontrada para producto ${syncedProduct.name}`);
+              }
+            }
+            await localProduct.update(updateData);
+            updated++;
+          }
+        } catch (error) {
+          console.error(`Error al actualizar producto ${syncedProduct.barcode}:`, error);
         }
       }
     }
@@ -1114,15 +1215,39 @@ async function updateProductsAfterSync(syncResults) {
               lastSync: /* @__PURE__ */ new Date(),
               remoteId: serverProduct.id
             };
-            if (serverProduct.CategoryId) {
-              const categoryExists = await Category.findByPk(serverProduct.CategoryId);
-              if (!categoryExists) {
-                console.log(`Categoría ID ${serverProduct.CategoryId} no encontrada para producto ${serverProduct.name}. Estableciendo CategoryId como null.`);
+            if (serverProduct.CategoryId || serverProduct.category_id) {
+              const categoryId = serverProduct.CategoryId || serverProduct.category_id;
+              if (categoriesMap[categoryId]) {
+                console.log(`Asignando categoría ${categoryId} a nuevo producto ${serverProduct.name}`);
+                productData.CategoryId = categoryId;
+              } else {
+                console.log(`Categoría ${categoryId} no encontrada para producto ${serverProduct.name}`);
                 productData.CategoryId = null;
               }
+            } else {
+              console.log(`Producto ${serverProduct.name} no tiene categoría asignada`);
             }
-            await Product.create(productData);
+            const newProduct = await Product.create(productData);
+            console.log(`Producto creado: ${JSON.stringify({
+              id: newProduct.id,
+              name: newProduct.name,
+              CategoryId: newProduct.CategoryId
+            })}`);
             added++;
+          } else {
+            if ((serverProduct.CategoryId || serverProduct.category_id) && exists.CategoryId !== (serverProduct.CategoryId || serverProduct.category_id)) {
+              const categoryId = serverProduct.CategoryId || serverProduct.category_id;
+              if (categoriesMap[categoryId]) {
+                console.log(`Actualizando CategoryId de producto existente ${exists.name} a ${categoryId}`);
+                await exists.update({
+                  CategoryId: categoryId,
+                  synced: true,
+                  modified: false,
+                  lastSync: /* @__PURE__ */ new Date()
+                });
+                updated++;
+              }
+            }
           }
         } catch (error) {
           console.error(`Error procesando producto ${serverProduct.barcode}:`, error);
@@ -1177,7 +1302,11 @@ function toJSON(data) {
 }
 async function getAllCategories() {
   try {
-    const categories = await Category.findAll();
+    const categories = await Category.findAll({
+      where: {
+        deletedLocally: false
+      }
+    });
     return toJSON(categories) || [];
   } catch (error) {
     console.error("Error al obtener las categorias: ", error);
@@ -1223,7 +1352,19 @@ async function deleteCategory(id) {
   try {
     const category = await Category.findByPk(id);
     if (!category) return null;
-    await category.destroy();
+    await category.update({
+      deletedLocally: true,
+      modified: true,
+      synced: false
+    });
+    try {
+      const { markCategoryAsDeleted: markCategoryAsDeleted2 } = await Promise.resolve().then(() => syncService);
+      if (typeof markCategoryAsDeleted2 === "function") {
+        markCategoryAsDeleted2(id);
+      }
+    } catch (error) {
+      console.error("Error al registrar categoría eliminada en servicio de sincronización:", error);
+    }
     return true;
   } catch (error) {
     console.error("Error al eliminar la categoria:", error);
@@ -1238,32 +1379,127 @@ async function updateCategoriesAfterSync(syncResults) {
       added: 0,
       skipped: 0
     };
-    if (!syncResults.serverCategories || !Array.isArray(syncResults.serverCategories)) {
-      console.warn("No hay categorías del servidor para actualizar");
+    const { categoriesToUpdateLocally } = syncResults;
+    if (!categoriesToUpdateLocally) {
+      console.warn("No hay datos de categorías para actualizar localmente");
       return result;
     }
-    for (const serverCategory of syncResults.serverCategories) {
-      try {
-        let existingCategory = await Category.findOne({
-          where: { name: serverCategory.name }
-        });
-        if (existingCategory) {
-          await existingCategory.update({
-            ...serverCategory,
-            synced: true,
-            deletedLocally: false
+    console.log("Datos de categorías a actualizar:", JSON.stringify(categoriesToUpdateLocally));
+    if (categoriesToUpdateLocally.created && Array.isArray(categoriesToUpdateLocally.created)) {
+      console.log(`Procesando ${categoriesToUpdateLocally.created.length} categorías nuevas`);
+      for (const serverCategory of categoriesToUpdateLocally.created) {
+        try {
+          let existingCategory = await Category.findOne({
+            where: { name: serverCategory.name }
           });
-          result.updated++;
-        } else {
-          await Category.create({
-            ...serverCategory,
-            synced: true
-          });
-          result.added++;
+          if (existingCategory) {
+            await existingCategory.update({
+              ...serverCategory,
+              synced: true,
+              modified: false
+            });
+            console.log(`Categoría actualizada: ${existingCategory.name}, ID: ${existingCategory.id}`);
+            result.updated++;
+          } else {
+            const newCategory = await Category.create({
+              ...serverCategory,
+              synced: true,
+              modified: false
+            });
+            console.log(`Categoría creada: ${newCategory.name}, ID: ${newCategory.id}`);
+            result.added++;
+          }
+        } catch (categoryError) {
+          console.error(`Error al procesar categoría nueva ${serverCategory.name}:`, categoryError);
+          result.skipped++;
         }
-      } catch (categoryError) {
-        console.error(`Error al procesar categoría ${serverCategory.name}:`, categoryError);
-        result.skipped++;
+      }
+    }
+    if (categoriesToUpdateLocally.updated && Array.isArray(categoriesToUpdateLocally.updated)) {
+      console.log(`Procesando ${categoriesToUpdateLocally.updated.length} categorías actualizadas`);
+      for (const serverCategory of categoriesToUpdateLocally.updated) {
+        try {
+          let existingCategory = await Category.findOne({
+            where: { id: serverCategory.id }
+          });
+          if (existingCategory) {
+            await existingCategory.update({
+              ...serverCategory,
+              synced: true,
+              modified: false
+            });
+            console.log(`Categoría actualizada: ${existingCategory.name}, ID: ${existingCategory.id}`);
+            result.updated++;
+          } else {
+            existingCategory = await Category.findOne({
+              where: { name: serverCategory.name }
+            });
+            if (existingCategory) {
+              await existingCategory.update({
+                ...serverCategory,
+                synced: true,
+                modified: false
+              });
+              console.log(`Categoría actualizada por nombre: ${existingCategory.name}, ID actualizado a: ${serverCategory.id}`);
+              result.updated++;
+            } else {
+              const newCategory = await Category.create({
+                ...serverCategory,
+                synced: true,
+                modified: false
+              });
+              console.log(`Categoría creada desde actualización: ${newCategory.name}, ID: ${newCategory.id}`);
+              result.added++;
+            }
+          }
+        } catch (categoryError) {
+          console.error(`Error al procesar categoría actualizada ${serverCategory.name}:`, categoryError);
+          result.skipped++;
+        }
+      }
+    }
+    if (categoriesToUpdateLocally.deleted && Array.isArray(categoriesToUpdateLocally.deleted) && categoriesToUpdateLocally.deleted.length > 0) {
+      console.log(`Procesando ${categoriesToUpdateLocally.deleted.length} categorías eliminadas`);
+      for (const categoryId of categoriesToUpdateLocally.deleted) {
+        try {
+          const categoryToDelete = await Category.findByPk(categoryId);
+          if (categoryToDelete) {
+            await categoryToDelete.destroy();
+            console.log(`Categoría eliminada: ID ${categoryId}`);
+          } else {
+            console.log(`Categoría ID ${categoryId} no encontrada para eliminar`);
+          }
+        } catch (deleteError) {
+          console.error(`Error al eliminar categoría ID ${categoryId}:`, deleteError);
+        }
+      }
+    }
+    if (syncResults.serverCategories && Array.isArray(syncResults.serverCategories)) {
+      console.log(`Adicionalmente, verificando ${syncResults.serverCategories.length} categorías recibidas del servidor`);
+      const localCategoriesById = {};
+      const allLocalCategories = await Category.findAll();
+      allLocalCategories.forEach((cat) => {
+        localCategoriesById[cat.id] = cat;
+      });
+      for (const serverCategory of syncResults.serverCategories) {
+        try {
+          if (serverCategory.id && !localCategoriesById[serverCategory.id]) {
+            const existingByName = await Category.findOne({
+              where: { name: serverCategory.name }
+            });
+            if (!existingByName) {
+              const newCategory = await Category.create({
+                ...serverCategory,
+                synced: true,
+                modified: false
+              });
+              console.log(`Categoría creada desde serverCategories: ${newCategory.name}, ID: ${newCategory.id}`);
+              result.added++;
+            }
+          }
+        } catch (error) {
+          console.error(`Error al procesar categoría del servidor ${serverCategory.name}:`, error);
+        }
       }
     }
     console.log(`Sincronización de categorías completada: ${result.updated} actualizadas, ${result.added} agregadas, ${result.skipped} omitidas`);

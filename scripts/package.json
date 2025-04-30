@@ -1,15 +1,17 @@
 {
-  "name": "inventory-db-migration",
+  "name": "inventory-management-scripts",
   "version": "1.0.0",
   "description": "Script de migración para base de datos de inventario",
   "type": "module",
   "main": "migrate-database.js",
   "scripts": {
     "migrate": "node migrate-database.js",
-    "update-structure": "node update-database-structure.js"
+    "update-db": "node update-database-structure.js",
+    "add-categories": "node insertCategories.js",
+    "add-deletedLocally": "node add-deletedLocally-to-categories.js"
   },
   "dependencies": {
-    "better-sqlite3": "^11.9.1",
-    "sqlite3": "^5.1.7"
+    "better-sqlite3": "^8.0.0",
+    "sqlite3": "^5.1.2"
   }
 } 

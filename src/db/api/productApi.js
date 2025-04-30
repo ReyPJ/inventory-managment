@@ -165,22 +165,98 @@ export async function updateProductsAfterSync(syncResults) {
     let added = 0;
     let skipped = 0;
 
-    // 1. Marcar productos locales como sincronizados
-    if (syncedProducts && Array.isArray(syncedProducts)) {
-      for (const syncedProduct of syncedProducts) {
-        const localProduct = await Product.findOne({
-          where: { barcode: syncedProduct.barcode },
-        });
+    // Crear un mapa de categorías por ID para referencia rápida
+    const categoriesMap = {};
+    try {
+      const allCategories = await Category.findAll();
+      allCategories.forEach(category => {
+        categoriesMap[category.id] = category;
+      });
+      console.log(`Categorías disponibles en BD local: ${Object.keys(categoriesMap).length}`);
+      console.log(`IDs de categorías: ${Object.keys(categoriesMap).join(', ')}`);
+    } catch (error) {
+      console.error("Error al obtener categorías para el mapa:", error);
+    }
 
-        if (localProduct) {
-          await localProduct.update({
-            synced: true,
-            modified: false,
-            lastSync: new Date(),
-            syncError: null,
-            remoteId: syncedProduct.id,
+    // 1. Primero actualizar los productos existentes (los que fueron modificados)
+    if (syncedProducts && syncedProducts.created && Array.isArray(syncedProducts.created)) {
+      console.log(`Procesando ${syncedProducts.created.length} productos creados`);
+      
+      for (const syncedProduct of syncedProducts.created) {
+        try {
+          // Intentar encontrar por barcode
+          const localProduct = await Product.findOne({
+            where: { barcode: syncedProduct.barcode },
           });
-          updated++;
+
+          if (localProduct) {
+            // Actualizar con los datos del servidor, incluyendo CategoryId
+            const updateData = {
+              synced: true,
+              modified: false,
+              lastSync: new Date(),
+              syncError: null,
+              remoteId: syncedProduct.id,
+            };
+            
+            // Verificar si el producto viene con CategoryId y si esa categoría existe localmente
+            if (syncedProduct.CategoryId || syncedProduct.category_id) {
+              const categoryId = syncedProduct.CategoryId || syncedProduct.category_id;
+              
+              if (categoriesMap[categoryId]) {
+                console.log(`Asignando categoría ${categoryId} a producto ${syncedProduct.name}`);
+                updateData.CategoryId = categoryId;
+              } else {
+                console.log(`Categoría ${categoryId} no encontrada para producto ${syncedProduct.name}`);
+              }
+            }
+            
+            await localProduct.update(updateData);
+            updated++;
+          }
+        } catch (error) {
+          console.error(`Error al actualizar producto creado ${syncedProduct.barcode}:`, error);
+        }
+      }
+    }
+    
+    if (syncedProducts && syncedProducts.updated && Array.isArray(syncedProducts.updated)) {
+      console.log(`Procesando ${syncedProducts.updated.length} productos actualizados`);
+      
+      for (const syncedProduct of syncedProducts.updated) {
+        try {
+          // Intentar encontrar por barcode
+          const localProduct = await Product.findOne({
+            where: { barcode: syncedProduct.barcode },
+          });
+
+          if (localProduct) {
+            // Actualizar con los datos del servidor, incluyendo CategoryId
+            const updateData = {
+              synced: true,
+              modified: false,
+              lastSync: new Date(),
+              syncError: null,
+              remoteId: syncedProduct.id,
+            };
+            
+            // Verificar si el producto viene con CategoryId y si esa categoría existe localmente
+            if (syncedProduct.CategoryId || syncedProduct.category_id) {
+              const categoryId = syncedProduct.CategoryId || syncedProduct.category_id;
+              
+              if (categoriesMap[categoryId]) {
+                console.log(`Asignando categoría ${categoryId} a producto ${syncedProduct.name}`);
+                updateData.CategoryId = categoryId;
+              } else {
+                console.log(`Categoría ${categoryId} no encontrada para producto ${syncedProduct.name}`);
+              }
+            }
+            
+            await localProduct.update(updateData);
+            updated++;
+          }
+        } catch (error) {
+          console.error(`Error al actualizar producto ${syncedProduct.barcode}:`, error);
         }
       }
     }
@@ -218,7 +294,7 @@ export async function updateProductsAfterSync(syncResults) {
           }
 
           if (!exists) {
-            // Verificar si el producto tiene CategoryId y si la categoría existe
+            // Preparar datos del producto para creación
             let productData = {
               ...serverProduct,
               synced: true,
@@ -228,20 +304,54 @@ export async function updateProductsAfterSync(syncResults) {
               remoteId: serverProduct.id,
             };
 
-            // Si tiene CategoryId, verificar que la categoría exista
-            if (serverProduct.CategoryId) {
-              const categoryExists = await Category.findByPk(serverProduct.CategoryId);
+            // Verificar si el producto viene con CategoryId y si esa categoría existe localmente
+            if (serverProduct.CategoryId || serverProduct.category_id) {
+              // Usar CategoryId si está disponible, sino usar category_id
+              const categoryId = serverProduct.CategoryId || serverProduct.category_id;
               
-              if (!categoryExists) {
-                console.log(`Categoría ID ${serverProduct.CategoryId} no encontrada para producto ${serverProduct.name}. Estableciendo CategoryId como null.`);
-                // Si la categoría no existe, establecer CategoryId como null
-                productData.CategoryId = null;
+              // Comprobar si la categoría existe en la base de datos local
+              if (categoriesMap[categoryId]) {
+                console.log(`Asignando categoría ${categoryId} a nuevo producto ${serverProduct.name}`);
+                productData.CategoryId = categoryId;
+              } else {
+                console.log(`Categoría ${categoryId} no encontrada para producto ${serverProduct.name}`);
+                productData.CategoryId = null; // Establecer explícitamente como null
               }
+            } else {
+              console.log(`Producto ${serverProduct.name} no tiene categoría asignada`);
             }
 
             // Es un producto nuevo del servidor, agregarlo localmente
-            await Product.create(productData);
+            const newProduct = await Product.create(productData);
+            
+            // Log detallado del producto creado
+            console.log(`Producto creado: ${JSON.stringify({
+              id: newProduct.id,
+              name: newProduct.name,
+              CategoryId: newProduct.CategoryId
+            })}`);
+            
             added++;
+          } else {
+            // El producto ya existe, podríamos actualizar su CategoryId si es necesario
+            // Verificar si el producto del servidor tiene CategoryId y si difiere del local
+            if ((serverProduct.CategoryId || serverProduct.category_id) && 
+                exists.CategoryId !== (serverProduct.CategoryId || serverProduct.category_id)) {
+              
+              const categoryId = serverProduct.CategoryId || serverProduct.category_id;
+              
+              // Verificar que la categoría existe
+              if (categoriesMap[categoryId]) {
+                console.log(`Actualizando CategoryId de producto existente ${exists.name} a ${categoryId}`);
+                await exists.update({ 
+                  CategoryId: categoryId,
+                  synced: true,
+                  modified: false,
+                  lastSync: new Date()
+                });
+                updated++;
+              }
+            }
           }
         } catch (error) {
           console.error(`Error procesando producto ${serverProduct.barcode}:`, error);
