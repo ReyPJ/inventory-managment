@@ -1,21 +1,22 @@
 import { Sequelize } from "sequelize";
 import path from "path";
-import { fileURLToPath } from "url";
-import process from "process";
 import fs from "fs";
+import process from "process";
+// Importar better-sqlite3 usando import estático
+import betterSqlite3 from "better-sqlite3";
+// Importar os para manejo del directorio temporal
+import os from "os";
 
-// Ubicación relativa para guardar la base de datos
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Determinar si la aplicación está empaquetada
+const isPackaged =
+  process.env.NODE_ENV === "production" ||
+  (typeof process.versions === "object" &&
+    typeof process.versions.electron === "string");
 
-// Determinar la ruta de la base de datos basado en el entorno
+console.log("¿Modo empaquetado?:", isPackaged);
+
+// Determinar la ruta de la base de datos
 let dbPath;
-
-// Verificar si estamos en el entorno empaquetado de Electron
-const isPackaged = process.env.NODE_ENV === 'production' || process.type === 'browser';
-console.log("¿Es aplicación empaquetada?:", isPackaged);
-console.log("Tipo de proceso:", process.type);
-console.log("NODE_ENV:", process.env.NODE_ENV);
 
 // Manejo mejorado para entornos de producción y desarrollo
 let userDataPath;
@@ -27,15 +28,18 @@ if (isPackaged) {
       userDataPath = process.env.APPDATA;
     } else if (process.platform === "darwin") {
       // macOS
-      userDataPath = path.join(process.env.HOME, "/Library/Application Support");
+      userDataPath = path.join(
+        process.env.HOME,
+        "/Library/Application Support"
+      );
     } else {
       // Linux y otros
       userDataPath = path.join(process.env.HOME, "/.local/share");
     }
-    
+
     // Crear una ruta específica para la aplicación
     const appDataPath = path.join(userDataPath, "sistema-inventario");
-    
+
     // Asegurar que el directorio existe
     if (!fs.existsSync(appDataPath)) {
       try {
@@ -45,7 +49,7 @@ if (isPackaged) {
         console.error("Error al crear directorio de datos:", mkdirErr);
       }
     }
-    
+
     // Usar una ubicación fija con nombre descriptivo
     dbPath = path.join(appDataPath, "inventory-database.sqlite");
     console.log("Ruta de base de datos en producción:", dbPath);
@@ -62,22 +66,35 @@ if (isPackaged) {
     } catch (e) {
       console.error("Error en fallback de ruta:", e);
       // Último recurso: usar una ruta en el directorio temporal
-      dbPath = path.join(require('os').tmpdir(), "inventory-database.sqlite");
+      dbPath = path.join(os.tmpdir(), "inventory-database.sqlite");
       console.log("Usando ruta temporal para base de datos:", dbPath);
     }
   }
 } else {
-  // En desarrollo, usamos la base de datos en la raíz del proyecto
-  dbPath = path.join(__dirname, "../../../database.sqlite");
+  // En desarrollo, usar una ruta relativa al directorio del proyecto
+  dbPath = path.join(process.cwd(), "database.sqlite");
   console.log("Ruta de base de datos en desarrollo:", dbPath);
 }
 
-console.log(`Base de datos usando ruta final: ${dbPath}`);
-
+// Crear la instancia de Sequelize con mejor manejo de errores
 const sequelize = new Sequelize({
   dialect: "sqlite",
   storage: dbPath,
-  logging: console.log, // Activar logging para depuración
+  logging: false, // Cambiar a console.log para ver consultas SQL durante depuración
+  dialectOptions: {
+    // Usar better-sqlite3 que es más confiable en Electron
+    dialectModule: betterSqlite3,
+  },
 });
+
+// Manejar errores de conexión
+sequelize
+  .authenticate()
+  .then(() => {
+    console.log("Conexión a la base de datos establecida correctamente.");
+  })
+  .catch((err) => {
+    console.error("Error al conectar a la base de datos:", err);
+  });
 
 export default sequelize;

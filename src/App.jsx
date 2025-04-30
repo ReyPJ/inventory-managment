@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { 
   getAllProducts, 
+  getAllActiveProducts,
   getAllCategories, 
   createProduct, 
   updateProduct,
@@ -9,15 +10,19 @@ import {
   getProductByBarcode,
   createCategory,
   updateCategory,
-  deleteCategory
+  deleteCategory,
+  updateProductsAfterSync,
+  purgeDeletedProducts
 } from './utils/ipcRenderer';
 import './styles/App.css';
 import ProductForm from './components/ProductForm';
 import ProductDetails from './components/ProductDetails';
 import CategoryManagement from './components/CategoryManagement';
 import InventoryStats from './components/InventoryStats';
+import SyncSettings from './components/SyncSettings';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { loadSavedConfig } from './utils/syncService';
 
 function App() {
   const [products, setProducts] = useState([]);
@@ -38,6 +43,7 @@ function App() {
   const [productToConfirm, setProductToConfirm] = useState(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [removeQuantity, setRemoveQuantity] = useState(1);
+  const [showSyncSettings, setShowSyncSettings] = useState(false);
   const barcodeInputRef = useRef(null);
   const dropdownRef = useRef(null);
   const [hasShownWelcome, setHasShownWelcome] = useState(false);
@@ -49,17 +55,21 @@ function App() {
   
   // Función para cargar o recargar los datos
   const loadData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
+      // Usar getAllActiveProducts para excluir productos eliminados localmente
+      const productsData = await getAllActiveProducts();
+      setProducts(productsData);
+      
       const categoriesData = await getAllCategories();
-      const productsData = await getAllProducts();
-      setProducts(productsData || []);
-      setCategories(categoriesData || []);
-    } catch (error) {
-      console.error('Error cargando datos:', error);
-      setError('Error al cargar los datos. Por favor, intenta nuevamente.');
-      toast.error('Error al cargar los datos', { autoClose: false });
+      setCategories(categoriesData);
+      
+      // Verificar si hay configuración de sincronización
+      loadSavedConfig();
+    } catch (err) {
+      setError(err.message || 'Error al cargar datos');
+      toast.error('Error al cargar datos');
+      console.error('Error al cargar datos:', err);
     } finally {
       setLoading(false);
     }
@@ -727,6 +737,32 @@ function App() {
     }
   }, [hasShownWelcome]); // Dependemos del estado para evitar loops
   
+  // Manejador de sincronización completa
+  const handleSyncComplete = async (result) => {
+    if (result && result.success) {
+      try {
+        setLoading(true);
+        
+        // Actualizar productos locales con los datos del servidor
+        const updateResult = await updateProductsAfterSync(result);
+        
+        // Eliminar físicamente los productos marcados como eliminados
+        const purgedCount = await purgeDeletedProducts();
+        
+        toast.success(`Sincronización completada: ${updateResult.updated} actualizados, ${updateResult.added} agregados, ${updateResult.skipped || 0} omitidos, ${purgedCount} purgados`);
+        
+        // Recargar los datos para reflejar los cambios
+        await loadData();
+      } catch (error) {
+        toast.error(`Error al procesar resultados de sincronización: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
+    } else if (result && !result.success) {
+      toast.error(`Error en sincronización: ${result.error}`);
+    }
+  };
+  
   if (loading) return <div className="loading-screen">Cargando inventario...</div>;
   
   return (
@@ -839,6 +875,12 @@ function App() {
           >
             <i className="icon-stats"></i> Estadísticas
           </button>
+          <button 
+            className="sync-button"
+            onClick={() => setShowSyncSettings(!showSyncSettings)}
+          >
+            <i className="icon-sync"></i> Sincronización
+          </button>
         </div>
       </header>
 
@@ -860,6 +902,13 @@ function App() {
 
       {showStats && products.length > 0 && (
         <InventoryStats products={products} categories={categories} />
+      )}
+
+      {/* Configuración de sincronización */}
+      {showSyncSettings && (
+        <SyncSettings
+          onSyncComplete={handleSyncComplete}
+        />
       )}
 
       {!showProductForm && !showProductDetails && (

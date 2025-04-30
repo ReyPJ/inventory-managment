@@ -898,3 +898,27 @@ body {
   font-weight: 600;
   color: #fff;
 }
+
+/* Botón de sincronización en el header */
+.sync-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.sync-button:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.sync-button i {
+  font-size: 0.9rem;
+}

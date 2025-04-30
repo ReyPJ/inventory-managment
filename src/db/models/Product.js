@@ -34,6 +34,26 @@ const Product = sequelize.define("Product", {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  modified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
+  deletedLocally: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  lastSync: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  syncError: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  remoteId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
 });
 
 export default Product;

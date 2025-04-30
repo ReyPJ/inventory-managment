@@ -34,7 +34,9 @@
       "output": "release"
     },
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "public/icon.ico",
       "artifactName": "Sistema-de-Inventario-${version}.${ext}"
     },
@@ -58,6 +60,7 @@
     }
   },
   "dependencies": {
+    "better-sqlite3": "^11.9.1",
     "pg": "^8.11.3",
     "pg-hstore": "^2.3.4",
     "react": "^19.0.0",

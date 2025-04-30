@@ -1,5 +1,4 @@
-"use strict";
-const { contextBridge, ipcRenderer } = require ? require("electron") : window.electron;
+const { contextBridge, ipcRenderer } = typeof require !== "undefined" ? require("electron") : window.electron;
 const log = (msg, ...args) => {
   console.log(`[Preload] ${msg}`, ...args);
 };
@@ -10,6 +9,10 @@ try {
     getAllProducts: () => {
       log("Llamando a getAllProducts");
       return ipcRenderer.invoke("get-all-products");
+    },
+    getAllActiveProducts: () => {
+      log("Llamando a getAllActiveProducts");
+      return ipcRenderer.invoke("get-all-active-products");
     },
     getProductById: (id) => {
       log("Llamando a getProductById:", id);
@@ -34,6 +37,14 @@ try {
     searchProducts: (query) => {
       log("Llamando a searchProducts:", query);
       return ipcRenderer.invoke("search-products", query);
+    },
+    updateProductsAfterSync: (syncResults) => {
+      log("Llamando a updateProductsAfterSync");
+      return ipcRenderer.invoke("update-products-after-sync", syncResults);
+    },
+    purgeDeletedProducts: () => {
+      log("Llamando a purgeDeletedProducts");
+      return ipcRenderer.invoke("purge-deleted-products");
     },
     // Categorías
     getAllCategories: () => {
@@ -62,3 +73,4 @@ try {
   console.error("[Preload] Error al inicializar:", error);
 }
 //# sourceMappingURL=preload.js.map
+reload.js.map

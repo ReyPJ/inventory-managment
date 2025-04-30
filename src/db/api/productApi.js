@@ -1,16 +1,14 @@
-import { Product, Category } from "../index.js";
 import { Op } from "sequelize";
+import Product from "../models/Product.js";
+import Category from "../models/Category.js";
+import { markProductAsDeleted } from "../../utils/syncService.js";
 
-// Función helper para convertir los objetos de Sequelize a objetos planos
-function toJSON(data) {
-  if (!data) return null;
-  if (Array.isArray(data)) {
-    return data.map((item) => (item.toJSON ? item.toJSON() : item));
-  }
-  return data.toJSON ? data.toJSON() : data;
-}
+// Función helper para convertir modelos a JSON
+const toJSON = (data) => {
+  return data ? JSON.parse(JSON.stringify(data)) : null;
+};
 
-// Obtener todos los productos
+// Obtener todos los productos (incluyendo los marcados como eliminados)
 export async function getAllProducts() {
   try {
     const products = await Product.findAll({
@@ -20,6 +18,23 @@ export async function getAllProducts() {
     return toJSON(products);
   } catch (err) {
     console.error("Error al obtener productos:", err);
+    return [];
+  }
+}
+
+// Obtener todos los productos activos (excluyendo los marcados como eliminados)
+export async function getAllActiveProducts() {
+  try {
+    const products = await Product.findAll({
+      where: {
+        deletedLocally: false,
+      },
+      include: [Category],
+      order: [["updatedAt", "DESC"]],
+    });
+    return toJSON(products);
+  } catch (err) {
+    console.error("Error al obtener productos activos:", err);
     return [];
   }
 }
@@ -41,7 +56,10 @@ export async function getProductById(id) {
 export async function getProductByBarcode(barcode) {
   try {
     const product = await Product.findOne({
-      where: { barcode },
+      where: {
+        barcode,
+        deletedLocally: false, // Solo buscar en productos activos
+      },
       include: [Category],
     });
     return toJSON(product);
@@ -51,10 +69,17 @@ export async function getProductByBarcode(barcode) {
   }
 }
 
-// Craar un nuevo producto
+// Crear un nuevo producto
 export async function createProduct(productData) {
   try {
-    const product = await Product.create(productData);
+    // Marcar como modificado y no sincronizado
+    const data = {
+      ...productData,
+      modified: true,
+      synced: false,
+    };
+
+    const product = await Product.create(data);
     return toJSON(product);
   } catch (err) {
     console.error("Error al crear el producto:", err);
@@ -67,7 +92,15 @@ export async function updateProduct(id, productData) {
   try {
     const product = await Product.findByPk(id);
     if (!product) return null;
-    await product.update(productData);
+
+    // Marcar como modificado y no sincronizado
+    const data = {
+      ...productData,
+      modified: true,
+      synced: false,
+    };
+
+    await product.update(data);
     return toJSON(product);
   } catch (err) {
     console.error("Error al actualizar el producto:", err);
@@ -75,12 +108,22 @@ export async function updateProduct(id, productData) {
   }
 }
 
-// Eliminar un producto
+// Eliminar un producto (marcado como eliminado localmente)
 export async function deleteProduct(id) {
   try {
     const product = await Product.findByPk(id);
     if (!product) return false;
-    await product.destroy();
+
+    // Marcar como eliminado localmente en lugar de eliminar físicamente
+    await product.update({
+      deletedLocally: true,
+      modified: true,
+      synced: false,
+    });
+
+    // Registrar en el servicio de sincronización
+    markProductAsDeleted(id);
+
     return true;
   } catch (err) {
     console.error("Error al eliminar el producto:", err);
@@ -88,14 +131,19 @@ export async function deleteProduct(id) {
   }
 }
 
-// Buscar productos por su nombre
+// Buscar productos por su nombre (solo activos)
 export async function searchProducts(query) {
   try {
     const products = await Product.findAll({
       where: {
-        [Op.or]: [
-          { name: { [Op.like]: `%${query}%` } },
-          { barcode: { [Op.like]: `%${query}%` } },
+        [Op.and]: [
+          {
+            [Op.or]: [
+              { name: { [Op.like]: `%${query}%` } },
+              { barcode: { [Op.like]: `%${query}%` } },
+            ],
+          },
+          { deletedLocally: false }, // Solo buscar en productos activos
         ],
       },
       include: [Category],
@@ -104,5 +152,111 @@ export async function searchProducts(query) {
   } catch (err) {
     console.error("Error al buscar productos:", err);
     return [];
+  }
+}
+
+// Actualizar productos después de una sincronización exitosa
+export async function updateProductsAfterSync(syncResults) {
+  try {
+    const { syncedProducts, serverProducts } = syncResults;
+
+    // Contadores para estadísticas
+    let updated = 0;
+    let added = 0;
+    let skipped = 0;
+
+    // 1. Marcar productos locales como sincronizados
+    if (syncedProducts && Array.isArray(syncedProducts)) {
+      for (const syncedProduct of syncedProducts) {
+        const localProduct = await Product.findOne({
+          where: { barcode: syncedProduct.barcode },
+        });
+
+        if (localProduct) {
+          await localProduct.update({
+            synced: true,
+            modified: false,
+            lastSync: new Date(),
+            syncError: null,
+            remoteId: syncedProduct.id,
+          });
+          updated++;
+        }
+      }
+    }
+
+    // Obtener todos los productos marcados como eliminados localmente
+    const deletedProducts = await Product.findAll({
+      where: { deletedLocally: true },
+    });
+    const locallyDeletedBarcodes = deletedProducts.map((p) => p.barcode);
+
+    console.log(
+      `Verificando ${
+        serverProducts?.length || 0
+      } productos del servidor contra ${
+        locallyDeletedBarcodes.length
+      } códigos eliminados localmente`
+    );
+
+    // 2. Agregar productos nuevos del servidor (solo si no fueron eliminados localmente)
+    if (serverProducts && Array.isArray(serverProducts)) {
+      for (const serverProduct of serverProducts) {
+        // Verificar si ya existe localmente o si está en la lista de eliminados
+        const exists = await Product.findOne({
+          where: { barcode: serverProduct.barcode },
+        });
+
+        // Si el producto está en la lista de barcodes eliminados, no lo agregamos
+        if (locallyDeletedBarcodes.includes(serverProduct.barcode)) {
+          console.log(
+            `Producto con barcode ${serverProduct.barcode} no agregado porque fue eliminado localmente`
+          );
+          skipped++;
+          continue;
+        }
+
+        if (!exists) {
+          // Es un producto nuevo del servidor, agregarlo localmente
+          await Product.create({
+            ...serverProduct,
+            synced: true,
+            modified: false,
+            deletedLocally: false,
+            lastSync: new Date(),
+            remoteId: serverProduct.id,
+          });
+          added++;
+        }
+      }
+    }
+
+    return { updated, added, skipped };
+  } catch (err) {
+    console.error(
+      "Error al actualizar productos después de sincronización:",
+      err
+    );
+    throw err;
+  }
+}
+
+// Limpiar productos marcados como eliminados después de sincronización exitosa
+export async function purgeDeletedProducts() {
+  try {
+    // Obtener todos los productos marcados como eliminados
+    const deleted = await Product.findAll({
+      where: { deletedLocally: true },
+    });
+
+    // Eliminar físicamente de la base de datos
+    for (const product of deleted) {
+      await product.destroy();
+    }
+
+    return deleted.length;
+  } catch (err) {
+    console.error("Error al purgar productos eliminados:", err);
+    return 0;
   }
 }

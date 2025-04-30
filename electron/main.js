@@ -40,7 +40,7 @@ function createWindow() {
   let preloadPath;
   if (isProd) {
     preloadPath = path.join(__dirname, "preload-simple.js");
-    
+
     // Si no existe en la ruta principal, buscar en otras ubicaciones
     if (!fs.existsSync(preloadPath)) {
       const alternativePaths = [
@@ -48,7 +48,7 @@ function createWindow() {
         path.join(process.resourcesPath, "preload-simple.js"),
         path.join(app.getAppPath(), "electron/preload-simple.js"),
       ];
-      
+
       // Intentar cada ruta alternativa
       for (const altPath of alternativePaths) {
         try {
@@ -66,9 +66,9 @@ function createWindow() {
     // En desarrollo, usar el preload.js normal
     preloadPath = path.join(__dirname, "preload.js");
   }
-  
+
   console.log("Usando preload desde:", preloadPath);
-  
+
   // Crear la ventana del navegador
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -91,9 +91,9 @@ function createWindow() {
   });
 
   // Permitir DevTools en producción solo con una combinación de teclas (Ctrl+Shift+I)
-  mainWindow.webContents.on('before-input-event', (event, input) => {
-    if (input.control && input.shift && input.key.toLowerCase() === 'i') {
-      console.log('Abriendo DevTools');
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    if (input.control && input.shift && input.key.toLowerCase() === "i") {
+      console.log("Abriendo DevTools");
       mainWindow.webContents.openDevTools();
       event.preventDefault();
     }
@@ -119,21 +119,23 @@ function createWindow() {
         // Primero, intentamos cargar desde la ubicación normal en el asar
         indexPath = path.join(distPath, "index.html");
         console.log("Intentando cargar desde:", indexPath);
-        
+
         // Si no existe, probamos con rutas alternativas
         if (!fs.existsSync(indexPath)) {
-          console.log("No se encontró index.html en la ruta principal, probando alternativas...");
-          
+          console.log(
+            "No se encontró index.html en la ruta principal, probando alternativas..."
+          );
+
           // Intentar con la ruta relativa a la ubicación actual
           const alternativePaths = [
             path.join(__dirname, "../../dist/index.html"),
             path.join(__dirname, "../dist/index.html"),
             path.join(process.cwd(), "dist/index.html"),
-            path.join(app.getAppPath(), "dist/index.html")
+            path.join(app.getAppPath(), "dist/index.html"),
           ];
-          
+
           console.log("Rutas alternativas a probar:", alternativePaths);
-          
+
           for (const altPath of alternativePaths) {
             console.log(`Comprobando ${altPath}: ${fs.existsSync(altPath)}`);
             if (fs.existsSync(altPath)) {
@@ -142,10 +144,12 @@ function createWindow() {
               break;
             }
           }
-          
+
           // Si no encontramos el archivo, mostrar un HTML de emergencia
           if (!fs.existsSync(indexPath)) {
-            console.log("No se encontró index.html en ninguna ruta alternativa");
+            console.log(
+              "No se encontró index.html en ninguna ruta alternativa"
+            );
             console.log("Usando HTML mínimo de emergencia");
             mainWindow.loadURL(`data:text/html,
               <!DOCTYPE html>
@@ -172,7 +176,7 @@ function createWindow() {
                   __dirname: ${__dirname}
                   cwd: ${process.cwd()}
                   appPath: ${app.getAppPath()}
-                  resourcesPath: ${process.resourcesPath || 'N/A'}
+                  resourcesPath: ${process.resourcesPath || "N/A"}
                   </pre>
                   <button onclick="require('electron').ipcRenderer.send('restart-app')">
                     Reiniciar Aplicación
@@ -184,32 +188,50 @@ function createWindow() {
             return;
           }
         }
-        
+
         console.log("Cargando desde:", indexPath);
         console.log("El archivo existe:", fs.existsSync(indexPath));
-        
+
         try {
           if (fs.existsSync(indexPath)) {
-            mainWindow.loadFile(indexPath).catch(err => {
+            mainWindow.loadFile(indexPath).catch((err) => {
               console.error("Error al cargar el archivo:", err);
-              mainWindow.loadURL("data:text/html,<html><body><h1>Error al cargar la aplicación</h1><p>" + err.message + "</p></body></html>");
+              mainWindow.loadURL(
+                "data:text/html,<html><body><h1>Error al cargar la aplicación</h1><p>" +
+                  err.message +
+                  "</p></body></html>"
+              );
             });
           } else {
             // Si no se encuentra el archivo, cargamos un HTML básico
             console.error("No se encontró el archivo index.html");
-            mainWindow.loadURL("data:text/html,<html><body><h1>Error al cargar la aplicación</h1><p>No se encontró el archivo index.html</p></body></html>");
+            mainWindow.loadURL(
+              "data:text/html,<html><body><h1>Error al cargar la aplicación</h1><p>No se encontró el archivo index.html</p></body></html>"
+            );
           }
         } catch (err) {
           console.error("Error en loadFile:", err);
-          mainWindow.loadURL("data:text/html,<html><body><h1>Error al cargar la aplicación</h1><p>" + err.message + "</p></body></html>");
+          mainWindow.loadURL(
+            "data:text/html,<html><body><h1>Error al cargar la aplicación</h1><p>" +
+              err.message +
+              "</p></body></html>"
+          );
         }
       } catch (err) {
         console.error("Error al intentar cargar el HTML:", err);
-        mainWindow.loadURL("data:text/html,<html><body><h1>Error</h1><p>" + err.message + "</p></body></html>");
+        mainWindow.loadURL(
+          "data:text/html,<html><body><h1>Error</h1><p>" +
+            err.message +
+            "</p></body></html>"
+        );
       }
-    })().catch(err => {
+    })().catch((err) => {
       console.error("Error al cargar el HTML:", err);
-      mainWindow.loadURL("data:text/html,<html><body><h1>Error</h1><p>" + err.message + "</p></body></html>");
+      mainWindow.loadURL(
+        "data:text/html,<html><body><h1>Error</h1><p>" +
+          err.message +
+          "</p></body></html>"
+      );
     });
   }
 
@@ -222,9 +244,9 @@ function createWindow() {
 // Manejador de eventos IPC para obtener todos los productos y categorias
 function setupIpcHandlers() {
   console.log("Configurando manejadores IPC...");
-  
+
   // Handler para reiniciar la aplicación
-  ipcMain.on('restart-app', () => {
+  ipcMain.on("restart-app", () => {
     console.log("Reiniciando aplicación...");
     app.relaunch();
     app.exit(0);
@@ -243,6 +265,18 @@ function setupIpcHandlers() {
     }
   });
 
+  ipcMain.handle("get-all-active-products", async () => {
+    try {
+      console.log("Manejador: Obteniendo productos activos");
+      const products = await productApi.getAllActiveProducts();
+      console.log("Productos activos obtenidos:", products.length);
+      return products;
+    } catch (error) {
+      console.error("Error al obtener productos activos:", error);
+      return [];
+    }
+  });
+
   ipcMain.handle("get-product-by-id", async (_, id) => {
     try {
       console.log("Manejador: Obteniendo producto por ID:", id);
@@ -257,7 +291,10 @@ function setupIpcHandlers() {
 
   ipcMain.handle("get-product-by-barcode", async (_, barcode) => {
     try {
-      console.log("Manejador: Obteniendo producto por código de barras:", barcode);
+      console.log(
+        "Manejador: Obteniendo producto por código de barras:",
+        barcode
+      );
       const product = await productApi.getProductByBarcode(barcode);
       console.log("Producto por código de barras:", product);
       return product;
@@ -287,10 +324,10 @@ function setupIpcHandlers() {
         console.error("Estructura de payload inválida:", payload);
         return null;
       }
-      
+
       const { id, productData } = payload;
       console.log("Actualizando producto:", id, productData);
-      
+
       const product = await productApi.updateProduct(id, productData);
       console.log("Producto actualizado:", product);
       return product;
@@ -321,6 +358,36 @@ function setupIpcHandlers() {
     } catch (error) {
       console.error("Error al buscar productos:", error);
       return [];
+    }
+  });
+
+  // Nuevos manejadores para sincronización
+  ipcMain.handle("update-products-after-sync", async (_, syncResults) => {
+    try {
+      console.log(
+        "Manejador: Actualizando productos después de sincronización"
+      );
+      const result = await productApi.updateProductsAfterSync(syncResults);
+      console.log("Resultado de actualización post-sincronización:", result);
+      return result;
+    } catch (error) {
+      console.error(
+        "Error al actualizar productos después de sincronización:",
+        error
+      );
+      throw error;
+    }
+  });
+
+  ipcMain.handle("purge-deleted-products", async () => {
+    try {
+      console.log("Manejador: Purgando productos eliminados");
+      const count = await productApi.purgeDeletedProducts();
+      console.log("Productos purgados:", count);
+      return count;
+    } catch (error) {
+      console.error("Error al purgar productos eliminados:", error);
+      return 0;
     }
   });
 
@@ -365,13 +432,16 @@ function setupIpcHandlers() {
     try {
       console.log("Manejador: Update category payload recibido:", payload);
       if (!payload || !payload.id) {
-        console.error("Estructura de payload inválida para categoría:", payload);
+        console.error(
+          "Estructura de payload inválida para categoría:",
+          payload
+        );
         return null;
       }
-      
+
       const { id, categoryData } = payload;
       console.log("Actualizando categoría:", id, categoryData);
-      
+
       const category = await categoryApi.updateCategory(id, categoryData);
       console.log("Categoría actualizada:", category);
       return category;
@@ -392,7 +462,7 @@ function setupIpcHandlers() {
       return false;
     }
   });
-  
+
   console.log("Manejadores IPC configurados correctamente");
 }
 
@@ -402,16 +472,20 @@ async function setupDatabase() {
     console.log("Inicializando base de datos...");
     await initDatabase();
     console.log("Base de datos inicializada correctamente");
-    
+
     try {
       // Ejecutar migraciones si es necesario
+      // La migración usará la nueva configuración con better-sqlite3
       await addDescriptionMigration(sequelize.getQueryInterface(), Sequelize);
       console.log("Migraciones aplicadas correctamente");
     } catch (migrationError) {
-      console.error("Error al aplicar migraciones (no crítico):", migrationError);
+      console.error(
+        "Error al aplicar migraciones (no crítico):",
+        migrationError
+      );
       // No detenemos la aplicación por un error de migración
     }
-    
+
     return true;
   } catch (error) {
     console.error("Error crítico al inicializar la base de datos:", error);
@@ -454,18 +528,24 @@ app.whenReady().then(async () => {
   console.log("Ambiente:", process.env.NODE_ENV || "development");
   console.log("Directorio de la aplicación:", __dirname);
   console.log("Ruta de dist:", distPath);
-  
+
   try {
-    console.log("Archivo index.html existe:", fs.existsSync(path.join(distPath, "index.html")));
-    
+    console.log(
+      "Archivo index.html existe:",
+      fs.existsSync(path.join(distPath, "index.html"))
+    );
+
     // Directorios disponibles
     console.log("Listado de directorios:");
     try {
       const rootDir = path.join(__dirname, "../../");
       console.log("Contenido de directorio raíz:", fs.readdirSync(rootDir));
-      
+
       if (fs.existsSync(path.join(__dirname, "../dist"))) {
-        console.log("Contenido de ../dist:", fs.readdirSync(path.join(__dirname, "../dist")));
+        console.log(
+          "Contenido de ../dist:",
+          fs.readdirSync(path.join(__dirname, "../dist"))
+        );
       }
     } catch (dirErr) {
       console.error("Error al listar directorios:", dirErr);
@@ -479,13 +559,13 @@ app.whenReady().then(async () => {
   } catch (dbError) {
     console.error("Error fatal en la base de datos:", dbError);
   }
-  
+
   try {
     setupIpcHandlers();
   } catch (ipcError) {
     console.error("Error al configurar IPC handlers:", ipcError);
   }
-  
+
   try {
     createWindow();
     console.log("Ventana creada con éxito");
@@ -508,5 +588,5 @@ process.on("uncaughtException", (error) => {
 });
 
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("Promesa rechazada no manejada:", reason);
+  console.error(`Promesa ${promise} rechazada no manejada:`, reason);
 });

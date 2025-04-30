@@ -1,0 +1,169 @@
+.sync-settings {
+  background-color: var(--card-bg);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  box-shadow: var(--box-shadow);
+  margin-bottom: 1.5rem;
+}
+
+.sync-settings h2 {
+  margin-top: 0;
+  color: var(--primary-color);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.sync-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: var(--light-text);
+}
+
+.form-group input {
+  background-color: var(--dark-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--light-text);
+  padding: 0.75rem;
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+}
+
+.preset-keys {
+  display: flex;
+  gap: 1rem;
+  margin: 0.5rem 0;
+}
+
+/* Botones específicos para tenant */
+.casa-button {
+  border-color: #6eacdf;
+  color: #6eacdf;
+}
+
+.casa-button:hover {
+  background-color: rgba(110, 172, 223, 0.2);
+}
+
+.negocio-button {
+  border-color: #f6c177;
+  color: #f6c177;
+}
+
+.negocio-button:hover {
+  background-color: rgba(246, 193, 119, 0.2);
+}
+
+.error-message {
+  color: var(--danger-color);
+  background-color: rgba(232, 59, 70, 0.1);
+  border: 1px solid rgba(232, 59, 70, 0.3);
+  padding: 0.75rem;
+  border-radius: var(--border-radius);
+  margin: 0.5rem 0;
+}
+
+.sync-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sync-info {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sync-info p {
+  margin: 0.5rem 0;
+  line-height: 1.4;
+}
+
+.sync-info strong {
+  color: var(--primary-color);
+}
+
+.sync-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.sync-now-button {
+  flex: 2;
+  min-width: 200px;
+}
+
+.danger-button {
+  flex: 1;
+  min-width: 150px;
+  background-color: transparent;
+  border: 1px solid var(--danger-color);
+  color: var(--danger-color);
+}
+
+.danger-button:hover {
+  background-color: var(--danger-color);
+  color: #fff;
+}
+
+/* Animación durante la sincronización */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+button:disabled i {
+  animation: pulse 1.5s infinite;
+}
+
+/* Iconos adicionales */
+.icon-home:before {
+  content: "🏠";
+}
+
+.icon-store:before {
+  content: "🏪";
+}
+
+/* Media queries para dispositivos móviles */
+@media (max-width: 768px) {
+  .preset-keys {
+    flex-direction: column;
+  }
+
+  .sync-actions {
+    flex-direction: column;
+  }
+
+  .sync-now-button,
+  .danger-button {
+    width: 100%;
+  }
+}
