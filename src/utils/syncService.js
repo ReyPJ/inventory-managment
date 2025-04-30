@@ -177,6 +177,18 @@ export const fullSyncProcess = async (localProducts, localCategories = []) => {
   }
 
   try {
+    // Variable para almacenar todos los resultados de la sincronización
+    const syncResults = {
+      success: true,
+      serverProducts: [],
+      syncedProducts: null,
+      deletedBarcodes: [],
+      serverCategories: [],
+      syncedCategories: null,
+      deletedCategoryIds: [],
+      categoriesToUpdateLocally: []
+    };
+  
     // PASO 1: Obtener productos y categorías del servidor
     const serverProducts = await getServerProducts();
     const serverCategories = await getServerCategories();
@@ -184,9 +196,16 @@ export const fullSyncProcess = async (localProducts, localCategories = []) => {
     console.log(`Obtenidos ${serverProducts.length} productos del servidor`);
     console.log(`Obtenidas ${serverCategories.length} categorías del servidor`);
 
+    // Actualizar syncResults con los datos del servidor
+    syncResults.serverProducts = serverProducts;
+    syncResults.serverCategories = serverCategories;
+
     // Sincronizar productos
     const deletedProducts = localProducts.filter((p) => p.deletedLocally);
     const deletedBarcodes = deletedProducts.map((p) => p.barcode);
+    
+    // Guardar en syncResults
+    syncResults.deletedBarcodes = deletedBarcodes;
 
     console.log(
       `Productos marcados como eliminados localmente: ${deletedBarcodes.length}`
@@ -196,6 +215,9 @@ export const fullSyncProcess = async (localProducts, localCategories = []) => {
     const filteredServerProducts = serverProducts.filter(
       (product) => !deletedBarcodes.includes(product.barcode)
     );
+    
+    // Actualizar syncResults
+    syncResults.serverProducts = filteredServerProducts;
 
     console.log(
       `Productos filtrados del servidor después de excluir eliminados: ${filteredServerProducts.length}`
@@ -216,6 +238,9 @@ export const fullSyncProcess = async (localProducts, localCategories = []) => {
     const deletedCategories = localCategories.filter((c) => c.deletedLocally);
     const deletedCategoryIds = deletedCategories.map((c) => c.id);
     
+    // Guardar en syncResults
+    syncResults.deletedCategoryIds = deletedCategoryIds;
+    
     console.log(
       `Categorías marcadas como eliminadas localmente: ${deletedCategoryIds.length}`
     );
@@ -224,6 +249,9 @@ export const fullSyncProcess = async (localProducts, localCategories = []) => {
     const filteredServerCategories = serverCategories.filter(
       (category) => !deletedCategoryIds.includes(category.id)
     );
+    
+    // Actualizar syncResults
+    syncResults.serverCategories = filteredServerCategories;
     
     console.log(
       `Categorías filtradas del servidor después de excluir eliminadas: ${filteredServerCategories.length}`
@@ -240,12 +268,8 @@ export const fullSyncProcess = async (localProducts, localCategories = []) => {
       .map((c) => c.id)
       .filter((id) => id !== undefined);
 
-    // PASO 2: Enviar sincronización con las listas filtradas de IDs
-    const productSyncResult = await syncProducts(
-      // Solo enviamos los productos modificados localmente y no eliminados
-      localProducts.filter((p) => p.modified && !p.deletedLocally),
-      allKnownProductIds
-    );
+    // PASO 2: Sincronizar primero las categorías y luego los productos
+    console.log("PASO 2A: Sincronizando categorías primero");
     
     // Filtrar categorías modificadas para sincronizar
     const categoriesToSync = localCategories.filter((c) => c.modified && !c.deletedLocally);
@@ -265,6 +289,52 @@ export const fullSyncProcess = async (localProducts, localCategories = []) => {
       categoriesToSend,
       allKnownCategoryIds
     );
+    
+    // Guardar resultado en syncResults
+    syncResults.syncedCategories = categorySyncResult;
+    
+    console.log("Resultado de sincronización de categorías:", categorySyncResult);
+    
+    // PASO 2B: Actualizar las categorías locales con los datos recibidos del servidor
+    // Esto asegura que las categorías estén disponibles antes de sincronizar productos
+    if (categorySyncResult) {
+      try {
+        // En lugar de llamar directamente a updateCategoriesAfterSync, registramos 
+        // la información que necesitará el cliente
+        console.log("Categorías del servidor recibidas, preparando datos para actualización local");
+        
+        // Guardamos las categorías que necesitaremos actualizar localmente
+        const categoriesToUpdateLocally = [];
+        
+        // Si tenemos categorías creadas en el servidor, las agregamos al listado
+        if (categorySyncResult.created && categorySyncResult.created.length > 0) {
+          console.log(`Recibidas ${categorySyncResult.created.length} categorías nuevas del servidor`);
+          categoriesToUpdateLocally.push(...categorySyncResult.created);
+        }
+        
+        // Si tenemos categorías actualizadas en el servidor, las agregamos al listado
+        if (categorySyncResult.updated && categorySyncResult.updated.length > 0) {
+          console.log(`Recibidas ${categorySyncResult.updated.length} categorías actualizadas del servidor`);
+          categoriesToUpdateLocally.push(...categorySyncResult.updated);
+        }
+        
+        // Guardamos las categorías a actualizar en los resultados para procesarlas después
+        syncResults.categoriesToUpdateLocally = categoriesToUpdateLocally;
+      } catch (error) {
+        console.error("Error preparando categorías para actualización local:", error);
+      }
+    }
+    
+    // PASO 2C: Ahora que las categorías están actualizadas, sincronizamos productos
+    console.log("PASO 2C: Sincronizando productos");
+    const productSyncResult = await syncProducts(
+      // Solo enviamos los productos modificados localmente y no eliminados
+      localProducts.filter((p) => p.modified && !p.deletedLocally),
+      allKnownProductIds
+    );
+    
+    // Guardar resultado en syncResults
+    syncResults.syncedProducts = productSyncResult;
 
     // Actualizar timestamp de última sincronización
     syncConfig.lastSyncTime = new Date().toISOString();
@@ -276,15 +346,7 @@ export const fullSyncProcess = async (localProducts, localCategories = []) => {
       locallyDeletedCategories.clear();
     }
 
-    return {
-      success: true,
-      serverProducts: filteredServerProducts,
-      syncedProducts: productSyncResult,
-      deletedBarcodes: deletedBarcodes,
-      serverCategories: filteredServerCategories,
-      syncedCategories: categorySyncResult,
-      deletedCategoryIds: deletedCategoryIds,
-    };
+    return syncResults;
   } catch (error) {
     console.error("Error en proceso de sincronización completa:", error);
     return {

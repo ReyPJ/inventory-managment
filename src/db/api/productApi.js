@@ -202,31 +202,50 @@ export async function updateProductsAfterSync(syncResults) {
     // 2. Agregar productos nuevos del servidor (solo si no fueron eliminados localmente)
     if (serverProducts && Array.isArray(serverProducts)) {
       for (const serverProduct of serverProducts) {
-        // Verificar si ya existe localmente o si está en la lista de eliminados
-        const exists = await Product.findOne({
-          where: { barcode: serverProduct.barcode },
-        });
-
-        // Si el producto está en la lista de barcodes eliminados, no lo agregamos
-        if (locallyDeletedBarcodes.includes(serverProduct.barcode)) {
-          console.log(
-            `Producto con barcode ${serverProduct.barcode} no agregado porque fue eliminado localmente`
-          );
-          skipped++;
-          continue;
-        }
-
-        if (!exists) {
-          // Es un producto nuevo del servidor, agregarlo localmente
-          await Product.create({
-            ...serverProduct,
-            synced: true,
-            modified: false,
-            deletedLocally: false,
-            lastSync: new Date(),
-            remoteId: serverProduct.id,
+        try {
+          // Verificar si ya existe localmente o si está en la lista de eliminados
+          const exists = await Product.findOne({
+            where: { barcode: serverProduct.barcode },
           });
-          added++;
+
+          // Si el producto está en la lista de barcodes eliminados, no lo agregamos
+          if (locallyDeletedBarcodes.includes(serverProduct.barcode)) {
+            console.log(
+              `Producto con barcode ${serverProduct.barcode} no agregado porque fue eliminado localmente`
+            );
+            skipped++;
+            continue;
+          }
+
+          if (!exists) {
+            // Verificar si el producto tiene CategoryId y si la categoría existe
+            let productData = {
+              ...serverProduct,
+              synced: true,
+              modified: false,
+              deletedLocally: false,
+              lastSync: new Date(),
+              remoteId: serverProduct.id,
+            };
+
+            // Si tiene CategoryId, verificar que la categoría exista
+            if (serverProduct.CategoryId) {
+              const categoryExists = await Category.findByPk(serverProduct.CategoryId);
+              
+              if (!categoryExists) {
+                console.log(`Categoría ID ${serverProduct.CategoryId} no encontrada para producto ${serverProduct.name}. Estableciendo CategoryId como null.`);
+                // Si la categoría no existe, establecer CategoryId como null
+                productData.CategoryId = null;
+              }
+            }
+
+            // Es un producto nuevo del servidor, agregarlo localmente
+            await Product.create(productData);
+            added++;
+          }
+        } catch (error) {
+          console.error(`Error procesando producto ${serverProduct.barcode}:`, error);
+          skipped++;
         }
       }
     }
@@ -237,6 +256,26 @@ export async function updateProductsAfterSync(syncResults) {
       "Error al actualizar productos después de sincronización:",
       err
     );
+    
+    // Manejar específicamente errores de restricción de clave foránea
+    if (err.name === 'SequelizeForeignKeyConstraintError') {
+      console.error("Error de restricción de clave foránea. Probablemente una categoría no existe en la base de datos local.");
+      console.error("Detalles:", {
+        name: err.name,
+        message: err.message,
+        sql: err.sql,
+        table: err.table || 'Desconocida'
+      });
+      
+      // Devolver información del error pero permitir continuar con la sincronización
+      return { 
+        updated: 0, 
+        added: 0, 
+        skipped: 0,
+        error: "Error de restricción de clave foránea. Las categorías referenciadas por los productos no existen en la base de datos local." 
+      };
+    }
+    
     throw err;
   }
 }

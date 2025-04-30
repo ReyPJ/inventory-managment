@@ -1,7 +1,7 @@
 {
   "name": "inventory-managment",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "main": "dist-electron/main.js",
   "description": "Sistema de gestión de inventario sin conexión",

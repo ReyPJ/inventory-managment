@@ -1094,26 +1094,39 @@ async function updateProductsAfterSync(syncResults) {
     );
     if (serverProducts && Array.isArray(serverProducts)) {
       for (const serverProduct of serverProducts) {
-        const exists = await Product.findOne({
-          where: { barcode: serverProduct.barcode }
-        });
-        if (locallyDeletedBarcodes.includes(serverProduct.barcode)) {
-          console.log(
-            `Producto con barcode ${serverProduct.barcode} no agregado porque fue eliminado localmente`
-          );
-          skipped++;
-          continue;
-        }
-        if (!exists) {
-          await Product.create({
-            ...serverProduct,
-            synced: true,
-            modified: false,
-            deletedLocally: false,
-            lastSync: /* @__PURE__ */ new Date(),
-            remoteId: serverProduct.id
+        try {
+          const exists = await Product.findOne({
+            where: { barcode: serverProduct.barcode }
           });
-          added++;
+          if (locallyDeletedBarcodes.includes(serverProduct.barcode)) {
+            console.log(
+              `Producto con barcode ${serverProduct.barcode} no agregado porque fue eliminado localmente`
+            );
+            skipped++;
+            continue;
+          }
+          if (!exists) {
+            let productData = {
+              ...serverProduct,
+              synced: true,
+              modified: false,
+              deletedLocally: false,
+              lastSync: /* @__PURE__ */ new Date(),
+              remoteId: serverProduct.id
+            };
+            if (serverProduct.CategoryId) {
+              const categoryExists = await Category.findByPk(serverProduct.CategoryId);
+              if (!categoryExists) {
+                console.log(`Categoría ID ${serverProduct.CategoryId} no encontrada para producto ${serverProduct.name}. Estableciendo CategoryId como null.`);
+                productData.CategoryId = null;
+              }
+            }
+            await Product.create(productData);
+            added++;
+          }
+        } catch (error) {
+          console.error(`Error procesando producto ${serverProduct.barcode}:`, error);
+          skipped++;
         }
       }
     }
@@ -1123,6 +1136,21 @@ async function updateProductsAfterSync(syncResults) {
       "Error al actualizar productos después de sincronización:",
       err
     );
+    if (err.name === "SequelizeForeignKeyConstraintError") {
+      console.error("Error de restricción de clave foránea. Probablemente una categoría no existe en la base de datos local.");
+      console.error("Detalles:", {
+        name: err.name,
+        message: err.message,
+        sql: err.sql,
+        table: err.table || "Desconocida"
+      });
+      return {
+        updated: 0,
+        added: 0,
+        skipped: 0,
+        error: "Error de restricción de clave foránea. Las categorías referenciadas por los productos no existen en la base de datos local."
+      };
+    }
     throw err;
   }
 }
