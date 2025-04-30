@@ -12,7 +12,7 @@ import "../styles/SyncSettings.css";
 
 function SyncSettings({ onSyncComplete }) {
   const [apiKey, setApiKey] = useState("");
-  const [apiUrl, setApiUrl] = useState("https://apilogisctica.com");
+  const [apiUrl, setApiUrl] = useState("https://apilogisctica.com/api");
   const [tenant, setTenant] = useState("");
   const [isConfigured, setIsConfigured] = useState(false);
   const [configError, setConfigError] = useState("");
@@ -29,7 +29,7 @@ function SyncSettings({ onSyncComplete }) {
       if (configLoaded) {
         const config = getSyncConfig();
         setApiKey(config.apiKey || "");
-        setApiUrl(config.apiUrl || "https://apilogisctica.com");
+        setApiUrl(config.apiUrl || "https://apilogisctica.com/api");
         setTenant(config.tenant || "");
         setIsConfigured(true);
         setLastSync(config.lastSyncTime);

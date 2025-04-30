@@ -7,7 +7,7 @@
 
 // Almacenamiento para la configuración de sincronización
 let syncConfig = {
-  apiUrl: "https://apilogisctica.com", // URL por defecto, cambiará en producción
+  apiUrl: "https://apilogisctica.com/api", // URL por defecto, cambiará en producción
   apiKey: null,
   tenant: null,
   lastSyncTime: null,
