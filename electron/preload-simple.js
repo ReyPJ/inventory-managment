@@ -23,6 +23,8 @@ const validSendChannels = [
   "delete-category",
   "update-products-after-sync",
   "purge-deleted-products",
+  "update-categories-after-sync",
+  "purge-deleted-categories",
 ];
 
 // Exponer solo APIs específicas y controladas al proceso de renderizado
@@ -40,7 +42,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   deleteProduct: (id) => ipcRenderer.invoke("delete-product", id),
   searchProducts: (query) => ipcRenderer.invoke("search-products", query),
   
-  // Funciones para sincronización
+  // Funciones para sincronización de productos
   updateProductsAfterSync: (syncResults) => 
     ipcRenderer.invoke("update-products-after-sync", syncResults),
   purgeDeletedProducts: () => 
@@ -54,6 +56,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateCategory: (id, categoryData) =>
     ipcRenderer.invoke("update-category", { id, categoryData }),
   deleteCategory: (id) => ipcRenderer.invoke("delete-category", id),
+  
+  // Funciones para sincronización de categorías
+  updateCategoriesAfterSync: (syncResults) => 
+    ipcRenderer.invoke("update-categories-after-sync", syncResults),
+  purgeDeletedCategories: () => 
+    ipcRenderer.invoke("purge-deleted-categories"),
 });
 
 console.log("✅ [DIAGNÓSTICO] preload-simple.js cargado correctamente");

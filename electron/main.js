@@ -8,8 +8,11 @@ import fs from "fs";
 import * as productApi from "../src/db/api/productApi.js";
 import * as categoryApi from "../src/db/api/categoryApi.js";
 
-// Importar el script de migración
+// Importar los scripts de migración
 import { up as addDescriptionMigration } from "./migrations/20230511-add-description.js";
+// Importar la migración para añadir deletedLocally a la tabla Categories
+// Usando import dinámico para que no bloquee el inicio si hay problemas
+// import runDeletedLocallyMigration from "../scripts/add-deletedLocally-to-categories.js";
 import { Sequelize } from "sequelize";
 import sequelize from "../src/db/config/database.js";
 
@@ -502,7 +505,67 @@ async function setupDatabase() {
       // Ejecutar migraciones si es necesario
       // La migración usará la nueva configuración con better-sqlite3
       await addDescriptionMigration(sequelize.getQueryInterface(), Sequelize);
-      console.log("Migraciones aplicadas correctamente");
+      console.log("Migración addDescription aplicada correctamente");
+      
+      // Ejecutar la migración para añadir deletedLocally a Categories
+      // Usar import dinámico para que no bloquee el inicio de la app
+      try {
+        console.log("Intentando cargar el script de migración deletedLocally...");
+        // Intentar múltiples rutas posibles para encontrar el script
+        let migrationModule = null;
+        
+        // Rutas posibles donde podría estar el script de migración
+        const migrationPaths = [
+          "../scripts/add-deletedLocally-to-categories.js",
+          "./scripts/add-deletedLocally-to-categories.js",
+          "../resources/scripts/add-deletedLocally-to-categories.js",
+          path.join(app.getAppPath(), "scripts/add-deletedLocally-to-categories.js"),
+          path.join(__dirname, "../scripts/add-deletedLocally-to-categories.js"),
+          path.join(__dirname, "../../scripts/add-deletedLocally-to-categories.js")
+        ];
+        
+        // Intentar cada ruta hasta encontrar el módulo
+        for (const migrationPath of migrationPaths) {
+          try {
+            console.log(`Intentando cargar migración desde: ${migrationPath}`);
+            migrationModule = await import(migrationPath).catch(() => null);
+            if (migrationModule) {
+              console.log(`Módulo encontrado en: ${migrationPath}`);
+              break;
+            }
+          } catch (err) {
+            console.log(`No se encontró en: ${migrationPath}`);
+          }
+        }
+        
+        if (migrationModule && migrationModule.default) {
+          console.log("Script de migración encontrado, ejecutando...");
+          await migrationModule.default();
+          console.log("Migración addDeletedLocallyToCategories aplicada correctamente");
+        } else {
+          console.warn("No se pudo cargar el módulo de migración. Verificando column manualmente");
+          
+          // Alternativa: verificar y crear la columna directamente
+          try {
+            const tableInfo = await sequelize.getQueryInterface().describeTable("Categories");
+            
+            if (!tableInfo.deletedLocally) {
+              console.log("Añadiendo columna deletedLocally directamente");
+              await sequelize.getQueryInterface().addColumn("Categories", "deletedLocally", {
+                type: Sequelize.BOOLEAN,
+                defaultValue: false
+              });
+              console.log("Columna deletedLocally añadida correctamente");
+            } else {
+              console.log("La columna deletedLocally ya existe");
+            }
+          } catch (directMigrationError) {
+            console.error("Error al aplicar migración directa:", directMigrationError);
+          }
+        }
+      } catch (deletedLocallyMigrationError) {
+        console.error("Error al aplicar migración deletedLocally (no crítico):", deletedLocallyMigrationError);
+      }
     } catch (migrationError) {
       console.error(
         "Error al aplicar migraciones (no crítico):",

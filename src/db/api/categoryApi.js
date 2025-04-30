@@ -12,13 +12,20 @@ function toJSON(data) {
 // Obtener todas las categorias
 export async function getAllCategories() {
   try {
-    // Modificar para excluir categorías marcadas como eliminadas localmente
-    const categories = await Category.findAll({
-      where: {
-        deletedLocally: false
-      }
-    });
-    return toJSON(categories) || [];
+    // Intentar excluir categorías con deletedLocally=true
+    try {
+      const categories = await Category.findAll({
+        where: {
+          deletedLocally: false
+        }
+      });
+      return toJSON(categories) || [];
+    } catch (filterError) {
+      // Si hay un error (como que no exista la columna), intentar obtener todas
+      console.error("Error al filtrar por deletedLocally, obteniendo todas las categorías:", filterError);
+      const allCategories = await Category.findAll();
+      return toJSON(allCategories) || [];
+    }
   } catch (error) {
     console.error("Error al obtener las categorias: ", error);
     return [];
