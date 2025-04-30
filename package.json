@@ -38,7 +38,7 @@
         "nsis"
       ],
       "icon": "public/icon.ico",
-      "artifactName": "Sistema-de-Inventario-${version}.${ext}"
+      "artifactName": "Sistema de Inventario ${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
