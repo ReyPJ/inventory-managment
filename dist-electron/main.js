@@ -1,10 +1,10 @@
-import { app as A, ipcMain as P, BrowserWindow as $e } from "electron";
+import { app as A, ipcMain as $, BrowserWindow as Pe } from "electron";
 import w from "path";
-import { fileURLToPath as je } from "url";
+import { fileURLToPath as Oe } from "url";
 import v from "process";
-import { Sequelize as F, DataTypes as x, Op as B } from "sequelize";
-import I from "fs";
-import Oe from "util";
+import { Sequelize as F, DataTypes as I, Op as B } from "sequelize";
+import x from "fs";
+import je from "util";
 import Ce from "os";
 function Ae(e) {
   return e && e.__esModule && Object.prototype.hasOwnProperty.call(e, "default") ? e.default : e;
@@ -13,26 +13,26 @@ var M = { exports: {} };
 function we(e) {
   throw new Error('Could not dynamically require "' + e + '". Please configure the dynamicRequireTargets or/and ignoreDynamicRequires option of @rollup/plugin-commonjs appropriately for this require call to work.');
 }
-var N = {}, ae;
+var z = {}, ae;
 function S() {
-  return ae || (ae = 1, N.getBooleanOption = (e, r) => {
+  return ae || (ae = 1, z.getBooleanOption = (e, r) => {
     let o = !1;
     if (r in e && typeof (o = e[r]) != "boolean")
       throw new TypeError(`Expected the "${r}" option to be a boolean`);
     return o;
-  }, N.cppdb = Symbol(), N.inspect = Symbol.for("nodejs.util.inspect.custom")), N;
+  }, z.cppdb = Symbol(), z.inspect = Symbol.for("nodejs.util.inspect.custom")), z;
 }
 var G, ne;
 function Ee() {
   if (ne) return G;
   ne = 1;
   const e = { value: "SqliteError", writable: !0, enumerable: !1, configurable: !0 };
-  function r(o, n) {
+  function r(o, i) {
     if (new.target !== r)
-      return new r(o, n);
-    if (typeof n != "string")
+      return new r(o, i);
+    if (typeof i != "string")
       throw new TypeError("Expected second argument to be a string");
-    Error.call(this, o), e.value = "" + o, Object.defineProperty(this, "message", e), Error.captureStackTrace(this, r), this.code = n;
+    Error.call(this, o), e.value = "" + o, Object.defineProperty(this, "message", e), Error.captureStackTrace(this, r), this.code = i;
   }
   return Object.setPrototypeOf(r, Error), Object.setPrototypeOf(r.prototype, Error.prototype), Object.defineProperty(r.prototype, "name", e), G = r, G;
 }
@@ -45,22 +45,22 @@ function De() {
   function r(o) {
     if (typeof o != "string" || o.length <= 7 || o.substring(0, 7) != "file://")
       throw new TypeError("must pass in a file:// URI to convert to a file path");
-    var n = decodeURI(o.substring(7)), t = n.indexOf("/"), a = n.substring(0, t), c = n.substring(t + 1);
-    return a == "localhost" && (a = ""), a && (a = e + e + a), c = c.replace(/^(.+)\|/, "$1:"), e == "\\" && (c = c.replace(/\//g, "\\")), /^.+\:/.test(c) || (c = e + c), a + c;
+    var i = decodeURI(o.substring(7)), n = i.indexOf("/"), a = i.substring(0, n), s = i.substring(n + 1);
+    return a == "localhost" && (a = ""), a && (a = e + e + a), s = s.replace(/^(.+)\|/, "$1:"), e == "\\" && (s = s.replace(/\//g, "\\")), /^.+\:/.test(s) || (s = e + s), a + s;
   }
   return J;
 }
 var ce;
 function _e() {
   return ce || (ce = 1, function(e, r) {
-    var o = I, n = w, t = De(), a = n.join, c = n.dirname, p = o.accessSync && function(s) {
+    var o = x, i = w, n = De(), a = i.join, s = i.dirname, u = o.accessSync && function(t) {
       try {
-        o.accessSync(s);
+        o.accessSync(t);
       } catch {
         return !1;
       }
       return !0;
-    } || o.existsSync || n.existsSync, f = {
+    } || o.existsSync || i.existsSync, g = {
       arrow: process.env.NODE_BINDINGS_ARROW || " → ",
       compiled: process.env.NODE_BINDINGS_COMPILED_DIR || "compiled",
       platform: process.platform,
@@ -92,54 +92,54 @@ function _e() {
         ["module_root", "lib", "binding", "nodePreGyp", "bindings"]
       ]
     };
-    function i(s) {
-      typeof s == "string" ? s = { bindings: s } : s || (s = {}), Object.keys(f).map(function(m) {
-        m in s || (s[m] = f[m]);
-      }), s.module_root || (s.module_root = r.getRoot(r.getFileName())), n.extname(s.bindings) != ".node" && (s.bindings += ".node");
-      for (var b = typeof __webpack_require__ == "function" ? __non_webpack_require__ : we, l = [], u = 0, d = s.try.length, y, h, g; u < d; u++) {
+    function b(t) {
+      typeof t == "string" ? t = { bindings: t } : t || (t = {}), Object.keys(g).map(function(m) {
+        m in t || (t[m] = g[m]);
+      }), t.module_root || (t.module_root = r.getRoot(r.getFileName())), i.extname(t.bindings) != ".node" && (t.bindings += ".node");
+      for (var p = typeof __webpack_require__ == "function" ? __non_webpack_require__ : we, c = [], l = 0, d = t.try.length, y, h, f; l < d; l++) {
         y = a.apply(
           null,
-          s.try[u].map(function(m) {
-            return s[m] || m;
+          t.try[l].map(function(m) {
+            return t[m] || m;
           })
-        ), l.push(y);
+        ), c.push(y);
         try {
-          return h = s.path ? b.resolve(y) : b(y), s.path || (h.path = y), h;
+          return h = t.path ? p.resolve(y) : p(y), t.path || (h.path = y), h;
         } catch (m) {
           if (m.code !== "MODULE_NOT_FOUND" && m.code !== "QUALIFIED_PATH_RESOLUTION_FAILED" && !/not find/i.test(m.message))
             throw m;
         }
       }
-      throw g = new Error(
+      throw f = new Error(
         `Could not locate the bindings file. Tried:
-` + l.map(function(m) {
-          return s.arrow + m;
+` + c.map(function(m) {
+          return t.arrow + m;
         }).join(`
 `)
-      ), g.tries = l, g;
+      ), f.tries = c, f;
     }
-    e.exports = r = i, r.getFileName = function(b) {
-      var l = Error.prepareStackTrace, u = Error.stackTraceLimit, d = {}, y;
-      Error.stackTraceLimit = 10, Error.prepareStackTrace = function(g, m) {
+    e.exports = r = b, r.getFileName = function(p) {
+      var c = Error.prepareStackTrace, l = Error.stackTraceLimit, d = {}, y;
+      Error.stackTraceLimit = 10, Error.prepareStackTrace = function(f, m) {
         for (var C = 0, te = m.length; C < te; C++)
           if (y = m[C].getFileName(), y !== __filename)
-            if (b) {
-              if (y !== b)
+            if (p) {
+              if (y !== p)
                 return;
             } else
               return;
-      }, Error.captureStackTrace(d), d.stack, Error.prepareStackTrace = l, Error.stackTraceLimit = u;
+      }, Error.captureStackTrace(d), d.stack, Error.prepareStackTrace = c, Error.stackTraceLimit = l;
       var h = "file://";
-      return y.indexOf(h) === 0 && (y = t(y)), y;
-    }, r.getRoot = function(b) {
-      for (var l = c(b), u; ; ) {
-        if (l === "." && (l = process.cwd()), p(a(l, "package.json")) || p(a(l, "node_modules")))
-          return l;
-        if (u === l)
+      return y.indexOf(h) === 0 && (y = n(y)), y;
+    }, r.getRoot = function(p) {
+      for (var c = s(p), l; ; ) {
+        if (c === "." && (c = process.cwd()), u(a(c, "package.json")) || u(a(c, "node_modules")))
+          return c;
+        if (l === c)
           throw new Error(
-            'Could not find module root given file: "' + b + '". Do you have a `package.json` file? '
+            'Could not find module root given file: "' + p + '". Do you have a `package.json` file? '
           );
-        u = l, l = a(l, "..");
+        l = c, c = a(c, "..");
       }
     };
   }(U, U.exports)), U.exports;
@@ -201,97 +201,97 @@ function Le() {
   const { cppdb: e } = S(), r = /* @__PURE__ */ new WeakMap();
   H = function(a) {
     if (typeof a != "function") throw new TypeError("Expected first argument to be a function");
-    const c = this[e], p = o(c, this), { apply: f } = Function.prototype, i = {
-      default: { value: n(f, a, c, p.default) },
-      deferred: { value: n(f, a, c, p.deferred) },
-      immediate: { value: n(f, a, c, p.immediate) },
-      exclusive: { value: n(f, a, c, p.exclusive) },
+    const s = this[e], u = o(s, this), { apply: g } = Function.prototype, b = {
+      default: { value: i(g, a, s, u.default) },
+      deferred: { value: i(g, a, s, u.deferred) },
+      immediate: { value: i(g, a, s, u.immediate) },
+      exclusive: { value: i(g, a, s, u.exclusive) },
       database: { value: this, enumerable: !0 }
     };
-    return Object.defineProperties(i.default.value, i), Object.defineProperties(i.deferred.value, i), Object.defineProperties(i.immediate.value, i), Object.defineProperties(i.exclusive.value, i), i.default.value;
+    return Object.defineProperties(b.default.value, b), Object.defineProperties(b.deferred.value, b), Object.defineProperties(b.immediate.value, b), Object.defineProperties(b.exclusive.value, b), b.default.value;
   };
-  const o = (t, a) => {
-    let c = r.get(t);
-    if (!c) {
-      const p = {
-        commit: t.prepare("COMMIT", a, !1),
-        rollback: t.prepare("ROLLBACK", a, !1),
-        savepoint: t.prepare("SAVEPOINT `	_bs3.	`", a, !1),
-        release: t.prepare("RELEASE `	_bs3.	`", a, !1),
-        rollbackTo: t.prepare("ROLLBACK TO `	_bs3.	`", a, !1)
+  const o = (n, a) => {
+    let s = r.get(n);
+    if (!s) {
+      const u = {
+        commit: n.prepare("COMMIT", a, !1),
+        rollback: n.prepare("ROLLBACK", a, !1),
+        savepoint: n.prepare("SAVEPOINT `	_bs3.	`", a, !1),
+        release: n.prepare("RELEASE `	_bs3.	`", a, !1),
+        rollbackTo: n.prepare("ROLLBACK TO `	_bs3.	`", a, !1)
       };
-      r.set(t, c = {
-        default: Object.assign({ begin: t.prepare("BEGIN", a, !1) }, p),
-        deferred: Object.assign({ begin: t.prepare("BEGIN DEFERRED", a, !1) }, p),
-        immediate: Object.assign({ begin: t.prepare("BEGIN IMMEDIATE", a, !1) }, p),
-        exclusive: Object.assign({ begin: t.prepare("BEGIN EXCLUSIVE", a, !1) }, p)
+      r.set(n, s = {
+        default: Object.assign({ begin: n.prepare("BEGIN", a, !1) }, u),
+        deferred: Object.assign({ begin: n.prepare("BEGIN DEFERRED", a, !1) }, u),
+        immediate: Object.assign({ begin: n.prepare("BEGIN IMMEDIATE", a, !1) }, u),
+        exclusive: Object.assign({ begin: n.prepare("BEGIN EXCLUSIVE", a, !1) }, u)
       });
     }
-    return c;
-  }, n = (t, a, c, { begin: p, commit: f, rollback: i, savepoint: s, release: b, rollbackTo: l }) => function() {
+    return s;
+  }, i = (n, a, s, { begin: u, commit: g, rollback: b, savepoint: t, release: p, rollbackTo: c }) => function() {
     let d, y, h;
-    c.inTransaction ? (d = s, y = b, h = l) : (d = p, y = f, h = i), d.run();
+    s.inTransaction ? (d = t, y = p, h = c) : (d = u, y = g, h = b), d.run();
     try {
-      const g = t.call(a, this, arguments);
-      return y.run(), g;
-    } catch (g) {
-      throw c.inTransaction && (h.run(), h !== i && y.run()), g;
+      const f = n.call(a, this, arguments);
+      return y.run(), f;
+    } catch (f) {
+      throw s.inTransaction && (h.run(), h !== b && y.run()), f;
     }
   };
   return H;
 }
 var W, de;
-function Re() {
+function Ne() {
   if (de) return W;
   de = 1;
   const { getBooleanOption: e, cppdb: r } = S();
-  return W = function(n, t) {
-    if (t == null && (t = {}), typeof n != "string") throw new TypeError("Expected first argument to be a string");
-    if (typeof t != "object") throw new TypeError("Expected second argument to be an options object");
-    const a = e(t, "simple"), c = this[r].prepare(`PRAGMA ${n}`, this, !0);
-    return a ? c.pluck().get() : c.all();
+  return W = function(i, n) {
+    if (n == null && (n = {}), typeof i != "string") throw new TypeError("Expected first argument to be a string");
+    if (typeof n != "object") throw new TypeError("Expected second argument to be an options object");
+    const a = e(n, "simple"), s = this[r].prepare(`PRAGMA ${i}`, this, !0);
+    return a ? s.pluck().get() : s.all();
   }, W;
 }
 var K, ue;
-function qe() {
+function Re() {
   if (ue) return K;
   ue = 1;
-  const e = I, r = w, { promisify: o } = Oe, { cppdb: n } = S(), t = o(e.access);
-  K = async function(p, f) {
-    if (f == null && (f = {}), typeof p != "string") throw new TypeError("Expected first argument to be a string");
-    if (typeof f != "object") throw new TypeError("Expected second argument to be an options object");
-    p = p.trim();
-    const i = "attached" in f ? f.attached : "main", s = "progress" in f ? f.progress : null;
-    if (!p) throw new TypeError("Backup filename cannot be an empty string");
-    if (p === ":memory:") throw new TypeError('Invalid backup filename ":memory:"');
-    if (typeof i != "string") throw new TypeError('Expected the "attached" option to be a string');
-    if (!i) throw new TypeError('The "attached" option cannot be an empty string');
-    if (s != null && typeof s != "function") throw new TypeError('Expected the "progress" option to be a function');
-    await t(r.dirname(p)).catch(() => {
+  const e = x, r = w, { promisify: o } = je, { cppdb: i } = S(), n = o(e.access);
+  K = async function(u, g) {
+    if (g == null && (g = {}), typeof u != "string") throw new TypeError("Expected first argument to be a string");
+    if (typeof g != "object") throw new TypeError("Expected second argument to be an options object");
+    u = u.trim();
+    const b = "attached" in g ? g.attached : "main", t = "progress" in g ? g.progress : null;
+    if (!u) throw new TypeError("Backup filename cannot be an empty string");
+    if (u === ":memory:") throw new TypeError('Invalid backup filename ":memory:"');
+    if (typeof b != "string") throw new TypeError('Expected the "attached" option to be a string');
+    if (!b) throw new TypeError('The "attached" option cannot be an empty string');
+    if (t != null && typeof t != "function") throw new TypeError('Expected the "progress" option to be a function');
+    await n(r.dirname(u)).catch(() => {
       throw new TypeError("Cannot save backup because the directory does not exist");
     });
-    const b = await t(p).then(() => !1, () => !0);
-    return a(this[n].backup(this, i, p, b), s || null);
+    const p = await n(u).then(() => !1, () => !0);
+    return a(this[i].backup(this, b, u, p), t || null);
   };
-  const a = (c, p) => {
-    let f = 0, i = !0;
-    return new Promise((s, b) => {
-      setImmediate(function l() {
+  const a = (s, u) => {
+    let g = 0, b = !0;
+    return new Promise((t, p) => {
+      setImmediate(function c() {
         try {
-          const u = c.transfer(f);
-          if (!u.remainingPages) {
-            c.close(), s(u);
+          const l = s.transfer(g);
+          if (!l.remainingPages) {
+            s.close(), t(l);
             return;
           }
-          if (i && (i = !1, f = 100), p) {
-            const d = p(u);
+          if (b && (b = !1, g = 100), u) {
+            const d = u(l);
             if (d !== void 0)
-              if (typeof d == "number" && d === d) f = Math.max(0, Math.min(2147483647, Math.round(d)));
+              if (typeof d == "number" && d === d) g = Math.max(0, Math.min(2147483647, Math.round(d)));
               else throw new TypeError("Expected progress callback to return a number or undefined");
           }
-          setImmediate(l);
-        } catch (u) {
-          c.close(), b(u);
+          setImmediate(c);
+        } catch (l) {
+          s.close(), p(l);
         }
       });
     });
@@ -299,35 +299,35 @@ function qe() {
   return K;
 }
 var X, pe;
-function ze() {
+function qe() {
   if (pe) return X;
   pe = 1;
   const { cppdb: e } = S();
   return X = function(o) {
     if (o == null && (o = {}), typeof o != "object") throw new TypeError("Expected first argument to be an options object");
-    const n = "attached" in o ? o.attached : "main";
-    if (typeof n != "string") throw new TypeError('Expected the "attached" option to be a string');
-    if (!n) throw new TypeError('The "attached" option cannot be an empty string');
-    return this[e].serialize(n);
+    const i = "attached" in o ? o.attached : "main";
+    if (typeof i != "string") throw new TypeError('Expected the "attached" option to be a string');
+    if (!i) throw new TypeError('The "attached" option cannot be an empty string');
+    return this[e].serialize(i);
   }, X;
 }
 var Q, fe;
-function Ne() {
+function ze() {
   if (fe) return Q;
   fe = 1;
   const { getBooleanOption: e, cppdb: r } = S();
-  return Q = function(n, t, a) {
-    if (t == null && (t = {}), typeof t == "function" && (a = t, t = {}), typeof n != "string") throw new TypeError("Expected first argument to be a string");
+  return Q = function(i, n, a) {
+    if (n == null && (n = {}), typeof n == "function" && (a = n, n = {}), typeof i != "string") throw new TypeError("Expected first argument to be a string");
     if (typeof a != "function") throw new TypeError("Expected last argument to be a function");
-    if (typeof t != "object") throw new TypeError("Expected second argument to be an options object");
-    if (!n) throw new TypeError("User-defined function name cannot be an empty string");
-    const c = "safeIntegers" in t ? +e(t, "safeIntegers") : 2, p = e(t, "deterministic"), f = e(t, "directOnly"), i = e(t, "varargs");
-    let s = -1;
-    if (!i) {
-      if (s = a.length, !Number.isInteger(s) || s < 0) throw new TypeError("Expected function.length to be a positive integer");
-      if (s > 100) throw new RangeError("User-defined functions cannot have more than 100 arguments");
+    if (typeof n != "object") throw new TypeError("Expected second argument to be an options object");
+    if (!i) throw new TypeError("User-defined function name cannot be an empty string");
+    const s = "safeIntegers" in n ? +e(n, "safeIntegers") : 2, u = e(n, "deterministic"), g = e(n, "directOnly"), b = e(n, "varargs");
+    let t = -1;
+    if (!b) {
+      if (t = a.length, !Number.isInteger(t) || t < 0) throw new TypeError("Expected function.length to be a positive integer");
+      if (t > 100) throw new RangeError("User-defined functions cannot have more than 100 arguments");
     }
-    return this[r].function(a, n, s, c, p, f), this;
+    return this[r].function(a, i, t, s, u, g), this;
   }, Q;
 }
 var Y, ge;
@@ -335,24 +335,24 @@ function ke() {
   if (ge) return Y;
   ge = 1;
   const { getBooleanOption: e, cppdb: r } = S();
-  Y = function(a, c) {
+  Y = function(a, s) {
     if (typeof a != "string") throw new TypeError("Expected first argument to be a string");
-    if (typeof c != "object" || c === null) throw new TypeError("Expected second argument to be an options object");
+    if (typeof s != "object" || s === null) throw new TypeError("Expected second argument to be an options object");
     if (!a) throw new TypeError("User-defined function name cannot be an empty string");
-    const p = "start" in c ? c.start : null, f = o(c, "step", !0), i = o(c, "inverse", !1), s = o(c, "result", !1), b = "safeIntegers" in c ? +e(c, "safeIntegers") : 2, l = e(c, "deterministic"), u = e(c, "directOnly"), d = e(c, "varargs");
+    const u = "start" in s ? s.start : null, g = o(s, "step", !0), b = o(s, "inverse", !1), t = o(s, "result", !1), p = "safeIntegers" in s ? +e(s, "safeIntegers") : 2, c = e(s, "deterministic"), l = e(s, "directOnly"), d = e(s, "varargs");
     let y = -1;
-    if (!d && (y = Math.max(n(f), i ? n(i) : 0), y > 0 && (y -= 1), y > 100))
+    if (!d && (y = Math.max(i(g), b ? i(b) : 0), y > 0 && (y -= 1), y > 100))
       throw new RangeError("User-defined functions cannot have more than 100 arguments");
-    return this[r].aggregate(p, f, i, s, a, y, b, l, u), this;
+    return this[r].aggregate(u, g, b, t, a, y, p, c, l), this;
   };
-  const o = (t, a, c) => {
-    const p = a in t ? t[a] : null;
-    if (typeof p == "function") return p;
-    if (p != null) throw new TypeError(`Expected the "${a}" option to be a function`);
-    if (c) throw new TypeError(`Missing required option "${a}"`);
+  const o = (n, a, s) => {
+    const u = a in n ? n[a] : null;
+    if (typeof u == "function") return u;
+    if (u != null) throw new TypeError(`Expected the "${a}" option to be a function`);
+    if (s) throw new TypeError(`Missing required option "${a}"`);
     return null;
-  }, n = ({ length: t }) => {
-    if (Number.isInteger(t) && t >= 0) return t;
+  }, i = ({ length: n }) => {
+    if (Number.isInteger(n) && n >= 0) return n;
     throw new TypeError("Expected function.length to be a positive integer");
   };
   return Y;
@@ -362,121 +362,121 @@ function Be() {
   if (ye) return Z;
   ye = 1;
   const { cppdb: e } = S();
-  Z = function(u, d) {
-    if (typeof u != "string") throw new TypeError("Expected first argument to be a string");
-    if (!u) throw new TypeError("Virtual table module name cannot be an empty string");
+  Z = function(l, d) {
+    if (typeof l != "string") throw new TypeError("Expected first argument to be a string");
+    if (!l) throw new TypeError("Virtual table module name cannot be an empty string");
     let y = !1;
     if (typeof d == "object" && d !== null)
-      y = !0, d = b(o(d, "used", u));
+      y = !0, d = p(o(d, "used", l));
     else {
       if (typeof d != "function") throw new TypeError("Expected second argument to be a function or a table definition object");
       d = r(d);
     }
-    return this[e].table(d, u, y), this;
+    return this[e].table(d, l, y), this;
   };
-  function r(l) {
-    return function(d, y, h, ...g) {
+  function r(c) {
+    return function(d, y, h, ...f) {
       const m = {
         module: d,
         database: y,
         table: h
-      }, C = f.call(l, m, g);
+      }, C = g.call(c, m, f);
       if (typeof C != "object" || C === null)
         throw new TypeError(`Virtual table module "${d}" did not return a table definition object`);
       return o(C, "returned", d);
     };
   }
-  function o(l, u, d) {
-    if (!p.call(l, "rows"))
-      throw new TypeError(`Virtual table module "${d}" ${u} a table definition without a "rows" property`);
-    if (!p.call(l, "columns"))
-      throw new TypeError(`Virtual table module "${d}" ${u} a table definition without a "columns" property`);
-    const y = l.rows;
-    if (typeof y != "function" || Object.getPrototypeOf(y) !== i)
-      throw new TypeError(`Virtual table module "${d}" ${u} a table definition with an invalid "rows" property (should be a generator function)`);
-    let h = l.columns;
-    if (!Array.isArray(h) || !(h = [...h]).every((O) => typeof O == "string"))
-      throw new TypeError(`Virtual table module "${d}" ${u} a table definition with an invalid "columns" property (should be an array of strings)`);
+  function o(c, l, d) {
+    if (!u.call(c, "rows"))
+      throw new TypeError(`Virtual table module "${d}" ${l} a table definition without a "rows" property`);
+    if (!u.call(c, "columns"))
+      throw new TypeError(`Virtual table module "${d}" ${l} a table definition without a "columns" property`);
+    const y = c.rows;
+    if (typeof y != "function" || Object.getPrototypeOf(y) !== b)
+      throw new TypeError(`Virtual table module "${d}" ${l} a table definition with an invalid "rows" property (should be a generator function)`);
+    let h = c.columns;
+    if (!Array.isArray(h) || !(h = [...h]).every((j) => typeof j == "string"))
+      throw new TypeError(`Virtual table module "${d}" ${l} a table definition with an invalid "columns" property (should be an array of strings)`);
     if (h.length !== new Set(h).size)
-      throw new TypeError(`Virtual table module "${d}" ${u} a table definition with duplicate column names`);
+      throw new TypeError(`Virtual table module "${d}" ${l} a table definition with duplicate column names`);
     if (!h.length)
-      throw new RangeError(`Virtual table module "${d}" ${u} a table definition with zero columns`);
-    let g;
-    if (p.call(l, "parameters")) {
-      if (g = l.parameters, !Array.isArray(g) || !(g = [...g]).every((O) => typeof O == "string"))
-        throw new TypeError(`Virtual table module "${d}" ${u} a table definition with an invalid "parameters" property (should be an array of strings)`);
+      throw new RangeError(`Virtual table module "${d}" ${l} a table definition with zero columns`);
+    let f;
+    if (u.call(c, "parameters")) {
+      if (f = c.parameters, !Array.isArray(f) || !(f = [...f]).every((j) => typeof j == "string"))
+        throw new TypeError(`Virtual table module "${d}" ${l} a table definition with an invalid "parameters" property (should be an array of strings)`);
     } else
-      g = c(y);
-    if (g.length !== new Set(g).size)
-      throw new TypeError(`Virtual table module "${d}" ${u} a table definition with duplicate parameter names`);
-    if (g.length > 32)
-      throw new RangeError(`Virtual table module "${d}" ${u} a table definition with more than the maximum number of 32 parameters`);
-    for (const O of g)
-      if (h.includes(O))
-        throw new TypeError(`Virtual table module "${d}" ${u} a table definition with column "${O}" which was ambiguously defined as both a column and parameter`);
+      f = s(y);
+    if (f.length !== new Set(f).size)
+      throw new TypeError(`Virtual table module "${d}" ${l} a table definition with duplicate parameter names`);
+    if (f.length > 32)
+      throw new RangeError(`Virtual table module "${d}" ${l} a table definition with more than the maximum number of 32 parameters`);
+    for (const j of f)
+      if (h.includes(j))
+        throw new TypeError(`Virtual table module "${d}" ${l} a table definition with column "${j}" which was ambiguously defined as both a column and parameter`);
     let m = 2;
-    if (p.call(l, "safeIntegers")) {
-      const O = l.safeIntegers;
-      if (typeof O != "boolean")
-        throw new TypeError(`Virtual table module "${d}" ${u} a table definition with an invalid "safeIntegers" property (should be a boolean)`);
-      m = +O;
+    if (u.call(c, "safeIntegers")) {
+      const j = c.safeIntegers;
+      if (typeof j != "boolean")
+        throw new TypeError(`Virtual table module "${d}" ${l} a table definition with an invalid "safeIntegers" property (should be a boolean)`);
+      m = +j;
     }
     let C = !1;
-    if (p.call(l, "directOnly") && (C = l.directOnly, typeof C != "boolean"))
-      throw new TypeError(`Virtual table module "${d}" ${u} a table definition with an invalid "directOnly" property (should be a boolean)`);
+    if (u.call(c, "directOnly") && (C = c.directOnly, typeof C != "boolean"))
+      throw new TypeError(`Virtual table module "${d}" ${l} a table definition with an invalid "directOnly" property (should be a boolean)`);
     return [
       `CREATE TABLE x(${[
-        ...g.map(s).map((O) => `${O} HIDDEN`),
-        ...h.map(s)
+        ...f.map(t).map((j) => `${j} HIDDEN`),
+        ...h.map(t)
       ].join(", ")});`,
-      n(y, new Map(h.map((O, Ie) => [O, g.length + Ie])), d),
-      g,
+      i(y, new Map(h.map((j, xe) => [j, f.length + xe])), d),
+      f,
       m,
       C
     ];
   }
-  function n(l, u, d) {
+  function i(c, l, d) {
     return function* (...h) {
-      const g = h.map((m) => Buffer.isBuffer(m) ? Buffer.from(m) : m);
-      for (let m = 0; m < u.size; ++m)
-        g.push(null);
-      for (const m of l(...h))
+      const f = h.map((m) => Buffer.isBuffer(m) ? Buffer.from(m) : m);
+      for (let m = 0; m < l.size; ++m)
+        f.push(null);
+      for (const m of c(...h))
         if (Array.isArray(m))
-          t(m, g, u.size, d), yield g;
+          n(m, f, l.size, d), yield f;
         else if (typeof m == "object" && m !== null)
-          a(m, g, u, d), yield g;
+          a(m, f, l, d), yield f;
         else
           throw new TypeError(`Virtual table module "${d}" yielded something that isn't a valid row object`);
     };
   }
-  function t(l, u, d, y) {
-    if (l.length !== d)
+  function n(c, l, d, y) {
+    if (c.length !== d)
       throw new TypeError(`Virtual table module "${y}" yielded a row with an incorrect number of columns`);
-    const h = u.length - d;
-    for (let g = 0; g < d; ++g)
-      u[g + h] = l[g];
+    const h = l.length - d;
+    for (let f = 0; f < d; ++f)
+      l[f + h] = c[f];
   }
-  function a(l, u, d, y) {
+  function a(c, l, d, y) {
     let h = 0;
-    for (const g of Object.keys(l)) {
-      const m = d.get(g);
+    for (const f of Object.keys(c)) {
+      const m = d.get(f);
       if (m === void 0)
-        throw new TypeError(`Virtual table module "${y}" yielded a row with an undeclared column "${g}"`);
-      u[m] = l[g], h += 1;
+        throw new TypeError(`Virtual table module "${y}" yielded a row with an undeclared column "${f}"`);
+      l[m] = c[f], h += 1;
     }
     if (h !== d.size)
       throw new TypeError(`Virtual table module "${y}" yielded a row with missing columns`);
   }
-  function c({ length: l }) {
-    if (!Number.isInteger(l) || l < 0)
+  function s({ length: c }) {
+    if (!Number.isInteger(c) || c < 0)
       throw new TypeError("Expected function.length to be a positive integer");
-    const u = [];
-    for (let d = 0; d < l; ++d)
-      u.push(`$${d + 1}`);
-    return u;
+    const l = [];
+    for (let d = 0; d < c; ++d)
+      l.push(`$${d + 1}`);
+    return l;
   }
-  const { hasOwnProperty: p } = Object.prototype, { apply: f } = Function.prototype, i = Object.getPrototypeOf(function* () {
-  }), s = (l) => `"${l.replace(/"/g, '""')}"`, b = (l) => () => l;
+  const { hasOwnProperty: u } = Object.prototype, { apply: g } = Function.prototype, b = Object.getPrototypeOf(function* () {
+  }), t = (c) => `"${c.replace(/"/g, '""')}"`, p = (c) => () => c;
   return Z;
 }
 var ee, he;
@@ -485,7 +485,7 @@ function Me() {
   he = 1;
   const e = function() {
   };
-  return ee = function(o, n) {
+  return ee = function(o, i) {
     return Object.assign(new e(), this);
   }, ee;
 }
@@ -493,32 +493,32 @@ var re, me;
 function Ue() {
   if (me) return re;
   me = 1;
-  const e = I, r = w, o = S(), n = Ee();
-  let t;
-  function a(p, f) {
+  const e = x, r = w, o = S(), i = Ee();
+  let n;
+  function a(u, g) {
     if (new.target == null)
-      return new a(p, f);
-    let i;
-    if (Buffer.isBuffer(p) && (i = p, p = ":memory:"), p == null && (p = ""), f == null && (f = {}), typeof p != "string") throw new TypeError("Expected first argument to be a string");
-    if (typeof f != "object") throw new TypeError("Expected second argument to be an options object");
-    if ("readOnly" in f) throw new TypeError('Misspelled option "readOnly" should be "readonly"');
-    if ("memory" in f) throw new TypeError('Option "memory" was removed in v7.0.0 (use ":memory:" filename instead)');
-    const s = p.trim(), b = s === "" || s === ":memory:", l = o.getBooleanOption(f, "readonly"), u = o.getBooleanOption(f, "fileMustExist"), d = "timeout" in f ? f.timeout : 5e3, y = "verbose" in f ? f.verbose : null, h = "nativeBinding" in f ? f.nativeBinding : null;
-    if (l && b && !i) throw new TypeError("In-memory/temporary databases cannot be readonly");
+      return new a(u, g);
+    let b;
+    if (Buffer.isBuffer(u) && (b = u, u = ":memory:"), u == null && (u = ""), g == null && (g = {}), typeof u != "string") throw new TypeError("Expected first argument to be a string");
+    if (typeof g != "object") throw new TypeError("Expected second argument to be an options object");
+    if ("readOnly" in g) throw new TypeError('Misspelled option "readOnly" should be "readonly"');
+    if ("memory" in g) throw new TypeError('Option "memory" was removed in v7.0.0 (use ":memory:" filename instead)');
+    const t = u.trim(), p = t === "" || t === ":memory:", c = o.getBooleanOption(g, "readonly"), l = o.getBooleanOption(g, "fileMustExist"), d = "timeout" in g ? g.timeout : 5e3, y = "verbose" in g ? g.verbose : null, h = "nativeBinding" in g ? g.nativeBinding : null;
+    if (c && p && !b) throw new TypeError("In-memory/temporary databases cannot be readonly");
     if (!Number.isInteger(d) || d < 0) throw new TypeError('Expected the "timeout" option to be a positive integer');
     if (d > 2147483647) throw new RangeError('Option "timeout" cannot be greater than 2147483647');
     if (y != null && typeof y != "function") throw new TypeError('Expected the "verbose" option to be a function');
     if (h != null && typeof h != "string" && typeof h != "object") throw new TypeError('Expected the "nativeBinding" option to be a string or addon object');
-    let g;
-    if (h == null ? g = t || (t = _e()("better_sqlite3.node")) : typeof h == "string" ? g = (typeof __non_webpack_require__ == "function" ? __non_webpack_require__ : we)(r.resolve(h).replace(/(\.node)?$/, ".node")) : g = h, g.isInitialized || (g.setErrorConstructor(n), g.isInitialized = !0), !b && !e.existsSync(r.dirname(s)))
+    let f;
+    if (h == null ? f = n || (n = _e()("better_sqlite3.node")) : typeof h == "string" ? f = (typeof __non_webpack_require__ == "function" ? __non_webpack_require__ : we)(r.resolve(h).replace(/(\.node)?$/, ".node")) : f = h, f.isInitialized || (f.setErrorConstructor(i), f.isInitialized = !0), !p && !e.existsSync(r.dirname(t)))
       throw new TypeError("Cannot open database because the directory does not exist");
     Object.defineProperties(this, {
-      [o.cppdb]: { value: new g.Database(s, p, b, l, u, d, y || null, i || null) },
-      ...c.getters
+      [o.cppdb]: { value: new f.Database(t, u, p, c, l, d, y || null, b || null) },
+      ...s.getters
     });
   }
-  const c = Se();
-  return a.prototype.prepare = c.prepare, a.prototype.transaction = Le(), a.prototype.pragma = Re(), a.prototype.backup = qe(), a.prototype.serialize = ze(), a.prototype.function = Ne(), a.prototype.aggregate = ke(), a.prototype.table = Be(), a.prototype.loadExtension = c.loadExtension, a.prototype.exec = c.exec, a.prototype.close = c.close, a.prototype.defaultSafeIntegers = c.defaultSafeIntegers, a.prototype.unsafeMode = c.unsafeMode, a.prototype[o.inspect] = Me(), re = a, re;
+  const s = Se();
+  return a.prototype.prepare = s.prepare, a.prototype.transaction = Le(), a.prototype.pragma = Ne(), a.prototype.backup = Re(), a.prototype.serialize = qe(), a.prototype.function = ze(), a.prototype.aggregate = ke(), a.prototype.table = Be(), a.prototype.loadExtension = s.loadExtension, a.prototype.exec = s.exec, a.prototype.close = s.close, a.prototype.defaultSafeIntegers = s.defaultSafeIntegers, a.prototype.unsafeMode = s.unsafeMode, a.prototype[o.inspect] = Me(), re = a, re;
 }
 var be;
 function Ve() {
@@ -535,9 +535,9 @@ if (ve)
       "/Library/Application Support"
     ) : V = w.join(v.env.HOME, "/.local/share");
     const e = w.join(V, "sistema-inventario");
-    if (!I.existsSync(e))
+    if (!x.existsSync(e))
       try {
-        I.mkdirSync(e, { recursive: !0 }), console.log("Directorio creado:", e);
+        x.mkdirSync(e, { recursive: !0 }), console.log("Directorio creado:", e);
       } catch (r) {
         console.error("Error al crear directorio de datos:", r);
       }
@@ -552,7 +552,7 @@ if (ve)
   }
 else
   D = w.join(v.cwd(), "database.sqlite"), console.log("Ruta de base de datos en desarrollo:", D);
-const R = new F({
+const N = new F({
   dialect: "sqlite",
   storage: D,
   logging: !1,
@@ -562,105 +562,105 @@ const R = new F({
     dialectModule: Ge
   }
 });
-R.authenticate().then(() => {
+N.authenticate().then(() => {
   console.log("Conexión a la base de datos establecida correctamente.");
 }).catch((e) => {
   console.error("Error al conectar a la base de datos:", e);
 });
-const $ = R.define("Product", {
+const P = N.define("Product", {
   id: {
-    type: x.INTEGER,
+    type: I.INTEGER,
     primaryKey: !0,
     autoIncrement: !0
   },
   barcode: {
-    type: x.STRING,
+    type: I.STRING,
     allowNull: !1,
     unique: !0
   },
   name: {
-    type: x.STRING,
+    type: I.STRING,
     allowNull: !1
   },
   description: {
-    type: x.TEXT,
+    type: I.TEXT,
     allowNull: !0
   },
   price: {
-    type: x.DECIMAL(10, 2),
+    type: I.DECIMAL(10, 2),
     allowNull: !1,
     defaultValue: 0
   },
   stock: {
-    type: x.INTEGER,
+    type: I.INTEGER,
     allowNull: !1,
     defaultValue: 0
   },
   synced: {
-    type: x.BOOLEAN,
+    type: I.BOOLEAN,
     defaultValue: !1
   },
   modified: {
-    type: x.BOOLEAN,
+    type: I.BOOLEAN,
     defaultValue: !0
   },
   deletedLocally: {
-    type: x.BOOLEAN,
+    type: I.BOOLEAN,
     defaultValue: !1
   },
   lastSync: {
-    type: x.DATE,
+    type: I.DATE,
     allowNull: !0
   },
   syncError: {
-    type: x.TEXT,
+    type: I.TEXT,
     allowNull: !0
   },
   remoteId: {
-    type: x.INTEGER,
+    type: I.INTEGER,
     allowNull: !0
   },
   CategoryId: {
-    type: x.INTEGER,
+    type: I.INTEGER,
     allowNull: !0,
     references: {
       model: "Categories",
       key: "id"
     }
   }
-}), E = R.define("Category", {
+}), E = N.define("Category", {
   id: {
-    type: x.INTEGER,
+    type: I.INTEGER,
     primaryKey: !0,
     autoIncrement: !0
   },
   name: {
-    type: x.STRING,
+    type: I.STRING,
     allowNull: !1,
     unique: !0
   },
   description: {
-    type: x.TEXT,
+    type: I.TEXT,
     allowNull: !0
   },
   synced: {
-    type: x.BOOLEAN,
+    type: I.BOOLEAN,
     defaultValue: !1
   },
   modified: {
-    type: x.BOOLEAN,
+    type: I.BOOLEAN,
     defaultValue: !0
   },
   deletedLocally: {
-    type: x.BOOLEAN,
+    type: I.BOOLEAN,
     defaultValue: !1
   }
 });
-E.hasMany($);
-$.belongsTo(E);
+E.hasMany(P);
+P.belongsTo(E);
 async function Je() {
   try {
-    await R.sync();
+    await N.sync();
     const e = ["PS4", "PS5"];
     for (const r of e)
       await E.findOrCreate({
@@ -690,45 +690,45 @@ const He = /* @__PURE__ */ new Set(), oe = /* @__PURE__ */ new Set(), Te = (e) =
   __proto__: null,
   markCategoryAsDeleted: We,
   markProductAsDeleted: Te
-}, Symbol.toStringTag, { value: "Module" })), q = (e) => e ? JSON.parse(JSON.stringify(e)) : null;
+}, Symbol.toStringTag, { value: "Module" })), R = (e) => e ? JSON.parse(JSON.stringify(e)) : null;
 async function Xe() {
   try {
-    const e = await $.findAll({
+    const e = await P.findAll({
       include: [E],
       order: [["updatedAt", "DESC"]]
     });
-    return q(e);
+    return R(e);
   } catch (e) {
     return console.error("Error al obtener productos:", e), [];
   }
 }
 async function Qe() {
   try {
-    const e = await $.findAll({
+    const e = await P.findAll({
       where: {
         deletedLocally: !1
       },
       include: [E],
       order: [["updatedAt", "DESC"]]
     });
-    return q(e);
+    return R(e);
   } catch (e) {
     return console.error("Error al obtener productos activos:", e), [];
   }
 }
 async function Ye(e) {
   try {
-    const r = await $.findByPk(e, {
+    const r = await P.findByPk(e, {
       include: [E]
     });
-    return q(r);
+    return R(r);
   } catch (r) {
     return console.error("Error al obtener el producto:", r), null;
   }
 }
 async function Ze(e) {
   try {
-    const r = await $.findOne({
+    const r = await P.findOne({
       where: {
         barcode: e,
         deletedLocally: !1
@@ -736,7 +736,7 @@ async function Ze(e) {
       },
       include: [E]
     });
-    return q(r);
+    return R(r);
   } catch (r) {
     return console.error("Error al obtener el producto por codigo de barras:", r), null;
   }
@@ -747,29 +747,29 @@ async function er(e) {
       ...e,
       modified: !0,
       synced: !1
-    }, o = await $.create(r);
-    return q(o);
+    }, o = await P.create(r);
+    return R(o);
   } catch (r) {
     throw console.error("Error al crear el producto:", r), r;
   }
 }
 async function rr(e, r) {
   try {
-    const o = await $.findByPk(e);
+    const o = await P.findByPk(e);
     if (!o) return null;
-    const n = {
+    const i = {
       ...r,
       modified: !0,
       synced: !1
     };
-    return await o.update(n), q(o);
+    return await o.update(i), R(o);
   } catch (o) {
     throw console.error("Error al actualizar el producto:", o), o;
   }
 }
 async function or(e) {
   try {
-    const r = await $.findByPk(e);
+    const r = await P.findByPk(e);
     return r ? (await r.update({
       deletedLocally: !0,
       modified: !0,
@@ -781,7 +781,7 @@ async function or(e) {
 }
 async function tr(e) {
   try {
-    const r = await $.findAll({
+    const r = await P.findAll({
       where: {
         [B.and]: [
           {
@@ -796,7 +796,7 @@ async function tr(e) {
       },
       include: [E]
     });
-    return q(r);
+    return R(r);
   } catch (r) {
     return console.error("Error al buscar productos:", r), [];
   }
@@ -804,117 +804,158 @@ async function tr(e) {
 async function ar(e) {
   try {
     const { syncedProducts: r, serverProducts: o } = e;
-    let n = 0, t = 0, a = 0;
-    const c = {};
+    let i = 0, n = 0, a = 0;
+    const s = [], u = {};
     try {
-      (await E.findAll()).forEach((s) => {
-        c[s.id] = s;
-      }), console.log(`Categorías disponibles en BD local: ${Object.keys(c).length}`), console.log(`IDs de categorías: ${Object.keys(c).join(", ")}`);
-    } catch (i) {
-      console.error("Error al obtener categorías para el mapa:", i);
+      (await E.findAll()).forEach((p) => {
+        u[p.id] = p;
+      }), console.log(`Categorías disponibles en BD local: ${Object.keys(u).length}`), console.log(`IDs de categorías: ${Object.keys(u).join(", ")}`);
+    } catch (t) {
+      console.error("Error al obtener categorías para el mapa:", t);
     }
     if (r && r.created && Array.isArray(r.created)) {
       console.log(`Procesando ${r.created.length} productos creados`);
-      for (const i of r.created)
+      for (const t of r.created)
         try {
-          const s = await $.findOne({
-            where: { barcode: i.barcode }
+          const p = await P.findOne({
+            where: { barcode: t.barcode }
           });
-          if (s) {
-            const b = {
+          if (p) {
+            const c = {
               synced: !0,
               modified: !1,
               lastSync: /* @__PURE__ */ new Date(),
               syncError: null,
-              remoteId: i.id
+              remoteId: t.id
             };
-            if (i.CategoryId || i.category_id) {
-              const l = i.CategoryId || i.category_id;
-              c[l] ? (console.log(`Asignando categoría ${l} a producto ${i.name}`), b.CategoryId = l) : console.log(`Categoría ${l} no encontrada para producto ${i.name}`);
+            if (t.CategoryId || t.category_id) {
+              const l = t.CategoryId || t.category_id;
+              u[l] ? (console.log(`Asignando categoría ${l} a producto ${t.name}`), c.CategoryId = l) : console.log(`Categoría ${l} no encontrada para producto ${t.name}`);
             }
-            await s.update(b), n++;
+            await p.update(c), i++;
           }
-        } catch (s) {
-          console.error(`Error al actualizar producto creado ${i.barcode}:`, s);
+        } catch (p) {
+          console.error(`Error al actualizar producto creado ${t.barcode}:`, p), s.push({
+            barcode: t.barcode,
+            name: t.name || "Nombre desconocido",
+            reason: "error_actualizacion_producto_creado",
+            error: p.message
+          }), a++;
         }
     }
     if (r && r.updated && Array.isArray(r.updated)) {
       console.log(`Procesando ${r.updated.length} productos actualizados`);
-      for (const i of r.updated)
+      for (const t of r.updated)
         try {
-          const s = await $.findOne({
-            where: { barcode: i.barcode }
+          const p = await P.findOne({
+            where: { barcode: t.barcode }
           });
-          if (s) {
-            const b = {
+          if (p) {
+            const c = {
               synced: !0,
               modified: !1,
               lastSync: /* @__PURE__ */ new Date(),
               syncError: null,
-              remoteId: i.id
+              remoteId: t.id
             };
-            if (i.CategoryId || i.category_id) {
-              const l = i.CategoryId || i.category_id;
-              c[l] ? (console.log(`Asignando categoría ${l} a producto ${i.name}`), b.CategoryId = l) : console.log(`Categoría ${l} no encontrada para producto ${i.name}`);
+            if (t.CategoryId || t.category_id) {
+              const l = t.CategoryId || t.category_id;
+              u[l] ? (console.log(`Asignando categoría ${l} a producto ${t.name}`), c.CategoryId = l) : console.log(`Categoría ${l} no encontrada para producto ${t.name}`);
             }
-            await s.update(b), n++;
+            await p.update(c), i++;
           }
-        } catch (s) {
-          console.error(`Error al actualizar producto ${i.barcode}:`, s);
+        } catch (p) {
+          console.error(`Error al actualizar producto ${t.barcode}:`, p), s.push({
+            barcode: t.barcode,
+            name: t.name || "Nombre desconocido",
+            reason: "error_actualizacion_producto_existente",
+            error: p.message
+          }), a++;
         }
     }
-    const f = (await $.findAll({
+    const b = (await P.findAll({
       where: { deletedLocally: !0 }
-    })).map((i) => i.barcode);
+    })).map((t) => t.barcode);
     if (console.log(
-      `Verificando ${(o == null ? void 0 : o.length) || 0} productos del servidor contra ${f.length} códigos eliminados localmente`
+      `Verificando ${(o == null ? void 0 : o.length) || 0} productos del servidor contra ${b.length} códigos eliminados localmente`
     ), o && Array.isArray(o))
-      for (const i of o)
+      for (const t of o)
         try {
-          const s = await $.findOne({
-            where: { barcode: i.barcode }
+          const p = await P.findOne({
+            where: { barcode: t.barcode }
           });
-          if (f.includes(i.barcode)) {
+          if (b.includes(t.barcode)) {
             console.log(
-              `Producto con barcode ${i.barcode} no agregado porque fue eliminado localmente`
-            ), a++;
+              `Producto con barcode ${t.barcode} no agregado porque fue eliminado localmente`
+            ), s.push({
+              barcode: t.barcode,
+              name: t.name,
+              reason: "eliminado_localmente",
+              id: t.id
+            }), a++;
             continue;
           }
-          if (s) {
-            if ((i.CategoryId || i.category_id) && s.CategoryId !== (i.CategoryId || i.category_id)) {
-              const b = i.CategoryId || i.category_id;
-              c[b] && (console.log(`Actualizando CategoryId de producto existente ${s.name} a ${b}`), await s.update({
-                CategoryId: b,
+          if (p) {
+            if ((t.CategoryId || t.category_id) && p.CategoryId !== (t.CategoryId || t.category_id)) {
+              const c = t.CategoryId || t.category_id;
+              u[c] && (console.log(`Actualizando CategoryId de producto existente ${p.name} a ${c}`), await p.update({
+                CategoryId: c,
                 synced: !0,
                 modified: !1,
                 lastSync: /* @__PURE__ */ new Date()
-              }), n++);
+              }), i++);
             }
           } else {
-            let b = {
-              ...i,
+            let c = {
+              ...t,
               synced: !0,
               modified: !1,
               deletedLocally: !1,
               lastSync: /* @__PURE__ */ new Date(),
-              remoteId: i.id
+              remoteId: t.id
             };
-            if (i.CategoryId || i.category_id) {
-              const u = i.CategoryId || i.category_id;
-              c[u] ? (console.log(`Asignando categoría ${u} a nuevo producto ${i.name}`), b.CategoryId = u) : (console.log(`Categoría ${u} no encontrada para producto ${i.name}`), b.CategoryId = null);
+            if (t.CategoryId || t.category_id) {
+              const l = t.CategoryId || t.category_id;
+              l === "N/A" || l === null || l === void 0 ? (console.log(`Categoría inválida para producto ${t.name}: ${l}`), c.CategoryId = null) : u[l] ? (console.log(`Asignando categoría ${l} a nuevo producto ${t.name}`), c.CategoryId = l) : (console.log(`Categoría ${l} no encontrada para producto ${t.name}`), console.log(`CATEGORÍA FALTANTE: El producto ${t.name} (${t.barcode}) requiere la categoría ID=${l} que no existe localmente`), s.push({
+                barcode: t.barcode,
+                name: t.name,
+                reason: "categoria_no_encontrada",
+                categoryId: l
+              }), c.CategoryId = null);
             } else
-              console.log(`Producto ${i.name} no tiene categoría asignada`);
-            const l = await $.create(b);
-            console.log(`Producto creado: ${JSON.stringify({
-              id: l.id,
-              name: l.name,
-              CategoryId: l.CategoryId
-            })}`), t++;
+              console.log(`Producto ${t.name} no tiene categoría asignada`);
+            try {
+              (!c.id || c.id === "N/A") && (console.log(`⚠️ PRODUCTO SIN ID: ${c.name} (${c.barcode})`), delete c.id);
+              const l = await P.create(c);
+              console.log(`Producto creado: ${JSON.stringify({
+                id: l.id,
+                name: l.name,
+                CategoryId: l.CategoryId
+              })}`), n++;
+            } catch (l) {
+              console.error(`Error al crear producto ${c.name} (${c.barcode}):`, l), console.error("Detalles del producto con error:", JSON.stringify(c, null, 2)), s.push({
+                barcode: t.barcode,
+                name: t.name,
+                reason: "error_validacion",
+                error: l.message,
+                details: {
+                  id: c.id || "N/A",
+                  fields: Object.keys(c).join(", ")
+                }
+              }), a++;
+            }
           }
-        } catch (s) {
-          console.error(`Error procesando producto ${i.barcode}:`, s), a++;
+        } catch (p) {
+          console.error(`Error procesando producto ${t.barcode}:`, p), s.push({
+            barcode: t.barcode,
+            name: t.name || "Nombre desconocido",
+            reason: "error_procesamiento",
+            error: p.message
+          }), a++;
         }
-    return { updated: n, added: t, skipped: a };
+    return s.length > 0 && (console.log("=========================================="), console.log(`DETALLE DE PRODUCTOS OMITIDOS (${s.length}):`), s.forEach((t, p) => {
+      console.log(`Producto omitido #${p + 1}:`), console.log(`  ID: ${t.id || "N/A"}`), console.log(`  Barcode: ${t.barcode}`), console.log(`  Nombre: ${t.name}`), console.log(`  Razón: ${t.reason}`), t.error && console.log(`  Error: ${t.error}`);
+    }), console.log("==========================================")), { updated: i, added: n, skipped: a, skippedProducts: s };
   } catch (r) {
     if (console.error(
       "Error al actualizar productos después de sincronización:",
@@ -936,7 +977,7 @@ async function ar(e) {
 }
 async function nr() {
   try {
-    const e = await $.findAll({
+    const e = await P.findAll({
       where: { deletedLocally: !0 }
     });
     for (const r of e)
@@ -1029,92 +1070,92 @@ async function ur(e) {
       return console.warn("No hay datos de categorías para actualizar localmente"), r;
     if (console.log("Datos de categorías a actualizar:", JSON.stringify(o)), o.created && Array.isArray(o.created)) {
       console.log(`Procesando ${o.created.length} categorías nuevas`);
-      for (const n of o.created)
+      for (const i of o.created)
         try {
-          let t = await E.findOne({
-            where: { name: n.name }
+          let n = await E.findOne({
+            where: { name: i.name }
           });
-          if (t)
-            await t.update({
-              ...n,
+          if (n)
+            await n.update({
+              ...i,
               synced: !0,
               modified: !1
-            }), console.log(`Categoría actualizada: ${t.name}, ID: ${t.id}`), r.updated++;
+            }), console.log(`Categoría actualizada: ${n.name}, ID: ${n.id}`), r.updated++;
           else {
             const a = await E.create({
-              ...n,
+              ...i,
               synced: !0,
               modified: !1
             });
             console.log(`Categoría creada: ${a.name}, ID: ${a.id}`), r.added++;
           }
-        } catch (t) {
-          console.error(`Error al procesar categoría nueva ${n.name}:`, t), r.skipped++;
+        } catch (n) {
+          console.error(`Error al procesar categoría nueva ${i.name}:`, n), r.skipped++;
         }
     }
     if (o.updated && Array.isArray(o.updated)) {
       console.log(`Procesando ${o.updated.length} categorías actualizadas`);
-      for (const n of o.updated)
+      for (const i of o.updated)
         try {
-          let t = await E.findOne({
-            where: { id: n.id }
+          let n = await E.findOne({
+            where: { id: i.id }
           });
-          if (t)
-            await t.update({
-              ...n,
+          if (n)
+            await n.update({
+              ...i,
               synced: !0,
               modified: !1
-            }), console.log(`Categoría actualizada: ${t.name}, ID: ${t.id}`), r.updated++;
-          else if (t = await E.findOne({
-            where: { name: n.name }
-          }), t)
-            await t.update({
-              ...n,
+            }), console.log(`Categoría actualizada: ${n.name}, ID: ${n.id}`), r.updated++;
+          else if (n = await E.findOne({
+            where: { name: i.name }
+          }), n)
+            await n.update({
+              ...i,
               synced: !0,
               modified: !1
-            }), console.log(`Categoría actualizada por nombre: ${t.name}, ID actualizado a: ${n.id}`), r.updated++;
+            }), console.log(`Categoría actualizada por nombre: ${n.name}, ID actualizado a: ${i.id}`), r.updated++;
           else {
             const a = await E.create({
-              ...n,
+              ...i,
               synced: !0,
               modified: !1
             });
             console.log(`Categoría creada desde actualización: ${a.name}, ID: ${a.id}`), r.added++;
           }
-        } catch (t) {
-          console.error(`Error al procesar categoría actualizada ${n.name}:`, t), r.skipped++;
+        } catch (n) {
+          console.error(`Error al procesar categoría actualizada ${i.name}:`, n), r.skipped++;
         }
     }
     if (o.deleted && Array.isArray(o.deleted) && o.deleted.length > 0) {
       console.log(`Procesando ${o.deleted.length} categorías eliminadas`);
-      for (const n of o.deleted)
+      for (const i of o.deleted)
         try {
-          const t = await E.findByPk(n);
-          t ? (await t.destroy(), console.log(`Categoría eliminada: ID ${n}`)) : console.log(`Categoría ID ${n} no encontrada para eliminar`);
-        } catch (t) {
-          console.error(`Error al eliminar categoría ID ${n}:`, t);
+          const n = await E.findByPk(i);
+          n ? (await n.destroy(), console.log(`Categoría eliminada: ID ${i}`)) : console.log(`Categoría ID ${i} no encontrada para eliminar`);
+        } catch (n) {
+          console.error(`Error al eliminar categoría ID ${i}:`, n);
         }
     }
     if (e.serverCategories && Array.isArray(e.serverCategories)) {
       console.log(`Adicionalmente, verificando ${e.serverCategories.length} categorías recibidas del servidor`);
-      const n = {};
+      const i = {};
       (await E.findAll()).forEach((a) => {
-        n[a.id] = a;
+        i[a.id] = a;
       });
       for (const a of e.serverCategories)
         try {
-          if (a.id && !n[a.id] && !await E.findOne({
+          if (a.id && !i[a.id] && !await E.findOne({
             where: { name: a.name }
           })) {
-            const p = await E.create({
+            const u = await E.create({
               ...a,
               synced: !0,
               modified: !1
             });
-            console.log(`Categoría creada desde serverCategories: ${p.name}, ID: ${p.id}`), r.added++;
+            console.log(`Categoría creada desde serverCategories: ${u.name}, ID: ${u.id}`), r.added++;
           }
-        } catch (c) {
-          console.error(`Error al procesar categoría del servidor ${a.name}:`, c);
+        } catch (s) {
+          console.error(`Error al procesar categoría del servidor ${a.name}:`, s);
         }
     }
     return console.log(`Sincronización de categorías completada: ${r.updated} actualizadas, ${r.added} agregadas, ${r.skipped} omitidas`), r;
@@ -1149,36 +1190,36 @@ async function fr(e) {
     return console.error("❌ Error al migrar:", r), Promise.reject(r);
   }
 }
-const gr = je(import.meta.url), j = w.dirname(gr), xe = A.isPackaged, L = xe || v.env.NODE_ENV === "production";
-console.log("¿Aplicación empaquetada?:", xe);
+const gr = Oe(import.meta.url), O = w.dirname(gr), Ie = A.isPackaged, L = Ie || v.env.NODE_ENV === "production";
+console.log("¿Aplicación empaquetada?:", Ie);
 console.log("¿Modo producción?:", L);
-console.log("Ruta de __dirname:", j);
-const z = L ? w.join(j, "../dist") : w.join(j, "../dist/");
-console.log("Ruta de distPath:", z);
-console.log("Esta ruta existe:", I.existsSync(z));
+console.log("Ruta de __dirname:", O);
+const q = L ? w.join(O, "../dist") : w.join(O, "../dist/");
+console.log("Ruta de distPath:", q);
+console.log("Esta ruta existe:", x.existsSync(q));
 let T;
-function Pe() {
+function $e() {
   let e;
   if (L) {
-    if (e = w.join(j, "preload-simple.js"), !I.existsSync(e)) {
+    if (e = w.join(O, "preload-simple.js"), !x.existsSync(e)) {
       const r = [
-        w.join(j, "../dist-electron/preload-simple.js"),
+        w.join(O, "../dist-electron/preload-simple.js"),
         w.join(v.resourcesPath, "preload-simple.js"),
         w.join(A.getAppPath(), "electron/preload-simple.js")
       ];
       for (const o of r)
         try {
-          if (I.existsSync(o)) {
+          if (x.existsSync(o)) {
             e = o, console.log("Preload encontrado en:", e);
             break;
           }
-        } catch (n) {
-          console.error(`Error al verificar ${o}:`, n);
+        } catch (i) {
+          console.error(`Error al verificar ${o}:`, i);
         }
     }
   } else
-    e = w.join(j, "preload.js");
-  if (console.log("Usando preload desde:", e), T = new $e({
+    e = w.join(O, "preload.js");
+  if (console.log("Usando preload desde:", e), T = new Pe({
     width: 1200,
     height: 800,
     webPreferences: {
@@ -1214,23 +1255,23 @@ function Pe() {
     let r;
     (async () => {
       try {
-        if (r = w.join(z, "index.html"), console.log("Intentando cargar desde:", r), !I.existsSync(r)) {
+        if (r = w.join(q, "index.html"), console.log("Intentando cargar desde:", r), !x.existsSync(r)) {
           console.log(
             "No se encontró index.html en la ruta principal, probando alternativas..."
           );
           const o = [
-            w.join(j, "../../dist/index.html"),
-            w.join(j, "../dist/index.html"),
+            w.join(O, "../../dist/index.html"),
+            w.join(O, "../dist/index.html"),
             w.join(v.cwd(), "dist/index.html"),
             w.join(A.getAppPath(), "dist/index.html")
           ];
           console.log("Rutas alternativas a probar:", o);
-          for (const n of o)
-            if (console.log(`Comprobando ${n}: ${I.existsSync(n)}`), I.existsSync(n)) {
-              r = n, console.log("Usando ruta alternativa:", r);
+          for (const i of o)
+            if (console.log(`Comprobando ${i}: ${x.existsSync(i)}`), x.existsSync(i)) {
+              r = i, console.log("Usando ruta alternativa:", r);
               break;
             }
-          if (!I.existsSync(r)) {
+          if (!x.existsSync(r)) {
             console.log(
               "No se encontró index.html en ninguna ruta alternativa"
             ), console.log("Usando HTML mínimo de emergencia"), T.loadURL(`data:text/html,
@@ -1254,8 +1295,8 @@ function Pe() {
                   <p>No se pudo encontrar el archivo index.html</p>
                   <h2>Información de depuración:</h2>
                   <pre>
-                  distPath: ${z}
-                  __dirname: ${j}
+                  distPath: ${q}
+                  __dirname: ${O}
                   cwd: ${v.cwd()}
                   appPath: ${A.getAppPath()}
                   resourcesPath: ${v.resourcesPath || "N/A"}
@@ -1270,9 +1311,9 @@ function Pe() {
             return;
           }
         }
-        console.log("Cargando desde:", r), console.log("El archivo existe:", I.existsSync(r));
+        console.log("Cargando desde:", r), console.log("El archivo existe:", x.existsSync(r));
         try {
-          I.existsSync(r) ? T.loadFile(r).catch((o) => {
+          x.existsSync(r) ? T.loadFile(r).catch((o) => {
             console.error("Error al cargar el archivo:", o), T.loadURL(
               "data:text/html,<html><body><h1>Error al cargar la aplicación</h1><p>" + o.message + "</p></body></html>"
             );
@@ -1300,9 +1341,9 @@ function Pe() {
   });
 }
 function yr() {
-  console.log("Configurando manejadores IPC..."), P.on("restart-app", () => {
+  console.log("Configurando manejadores IPC..."), $.on("restart-app", () => {
     console.log("Reiniciando aplicación..."), A.relaunch(), A.exit(0);
-  }), P.handle("get-all-products", async () => {
+  }), $.handle("get-all-products", async () => {
     try {
       console.log("Manejador: Obteniendo todos los productos");
       const e = await Xe();
@@ -1310,7 +1351,7 @@ function yr() {
     } catch (e) {
       return console.error("Error al obtener productos:", e), [];
     }
-  }), P.handle("get-all-active-products", async () => {
+  }), $.handle("get-all-active-products", async () => {
     try {
       console.log("Manejador: Obteniendo productos activos");
       const e = await Qe();
@@ -1318,7 +1359,7 @@ function yr() {
     } catch (e) {
       return console.error("Error al obtener productos activos:", e), [];
     }
-  }), P.handle("get-product-by-id", async (e, r) => {
+  }), $.handle("get-product-by-id", async (e, r) => {
     try {
       console.log("Manejador: Obteniendo producto por ID:", r);
       const o = await Ye(r);
@@ -1326,7 +1367,7 @@ function yr() {
     } catch (o) {
       return console.error("Error al obtener producto por ID:", o), null;
     }
-  }), P.handle("get-product-by-barcode", async (e, r) => {
+  }), $.handle("get-product-by-barcode", async (e, r) => {
     try {
       console.log(
         "Manejador: Obteniendo producto por código de barras:",
@@ -1337,7 +1378,7 @@ function yr() {
     } catch (o) {
       return console.error("Error al obtener producto por código:", o), null;
     }
-  }), P.handle("create-product", async (e, r) => {
+  }), $.handle("create-product", async (e, r) => {
     try {
       console.log("Manejador: Creando producto:", r);
       const o = await er(r);
@@ -1345,18 +1386,18 @@ function yr() {
     } catch (o) {
       return console.error("Error al crear producto:", o), null;
     }
-  }), P.handle("update-product", async (e, r) => {
+  }), $.handle("update-product", async (e, r) => {
     try {
       if (console.log("Manejador: Update product payload recibido:", r), !r || !r.id)
         return console.error("Estructura de payload inválida:", r), null;
-      const { id: o, productData: n } = r;
-      console.log("Actualizando producto:", o, n);
-      const t = await rr(o, n);
-      return console.log("Producto actualizado:", t), t;
+      const { id: o, productData: i } = r;
+      console.log("Actualizando producto:", o, i);
+      const n = await rr(o, i);
+      return console.log("Producto actualizado:", n), n;
     } catch (o) {
       return console.error("Error al actualizar producto:", o), null;
     }
-  }), P.handle("delete-product", async (e, r) => {
+  }), $.handle("delete-product", async (e, r) => {
     try {
       console.log("Manejador: Eliminando producto:", r);
       const o = await or(r);
@@ -1364,7 +1405,7 @@ function yr() {
     } catch (o) {
       return console.error("Error al eliminar producto:", o), !1;
     }
-  }), P.handle("search-products", async (e, r) => {
+  }), $.handle("search-products", async (e, r) => {
     try {
       console.log("Manejador: Buscando productos:", r);
       const o = await tr(r);
@@ -1372,7 +1413,7 @@ function yr() {
     } catch (o) {
       return console.error("Error al buscar productos:", o), [];
     }
-  }), P.handle("update-products-after-sync", async (e, r) => {
+  }), $.handle("update-products-after-sync", async (e, r) => {
     try {
       console.log(
         "Manejador: Actualizando productos después de sincronización"
@@ -1385,7 +1426,7 @@ function yr() {
         o
       ), o;
     }
-  }), P.handle("purge-deleted-products", async () => {
+  }), $.handle("purge-deleted-products", async () => {
     try {
       console.log("Manejador: Purgando productos eliminados");
       const e = await nr();
@@ -1393,7 +1434,7 @@ function yr() {
     } catch (e) {
       return console.error("Error al purgar productos eliminados:", e), 0;
     }
-  }), P.handle("get-all-categories", async () => {
+  }), $.handle("get-all-categories", async () => {
     try {
       console.log("Manejador: Obteniendo todas las categorías");
       const e = await ir();
@@ -1401,7 +1442,7 @@ function yr() {
     } catch (e) {
       return console.error("Error al obtener categorías:", e), [];
     }
-  }), P.handle("get-category-by-id", async (e, r) => {
+  }), $.handle("get-category-by-id", async (e, r) => {
     try {
       console.log("Manejador: Obteniendo categoría por ID:", r);
       const o = await cr(r);
@@ -1409,7 +1450,7 @@ function yr() {
     } catch (o) {
       return console.error("Error al obtener categoría por ID:", o), null;
     }
-  }), P.handle("create-category", async (e, r) => {
+  }), $.handle("create-category", async (e, r) => {
     try {
       console.log("Manejador: Creando categoría:", r);
       const o = await lr(r);
@@ -1417,21 +1458,21 @@ function yr() {
     } catch (o) {
       return console.error("Error al crear categoría:", o), null;
     }
-  }), P.handle("update-category", async (e, r) => {
+  }), $.handle("update-category", async (e, r) => {
     try {
       if (console.log("Manejador: Update category payload recibido:", r), !r || !r.id)
         return console.error(
           "Estructura de payload inválida para categoría:",
           r
         ), null;
-      const { id: o, categoryData: n } = r;
-      console.log("Actualizando categoría:", o, n);
-      const t = await sr(o, n);
-      return console.log("Categoría actualizada:", t), t;
+      const { id: o, categoryData: i } = r;
+      console.log("Actualizando categoría:", o, i);
+      const n = await sr(o, i);
+      return console.log("Categoría actualizada:", n), n;
     } catch (o) {
       return console.error("Error al actualizar categoría:", o), null;
     }
-  }), P.handle("delete-category", async (e, r) => {
+  }), $.handle("delete-category", async (e, r) => {
     try {
       console.log("Manejador: Eliminando categoría:", r);
       const o = await dr(r);
@@ -1439,7 +1480,7 @@ function yr() {
     } catch (o) {
       return console.error("Error al eliminar categoría:", o), !1;
     }
-  }), P.handle("update-categories-after-sync", async (e, r) => {
+  }), $.handle("update-categories-after-sync", async (e, r) => {
     try {
       console.log("Manejador: Actualizando categorías después de sincronización");
       const o = await ur(r);
@@ -1447,7 +1488,7 @@ function yr() {
     } catch (o) {
       return console.error("Error al actualizar categorías después de sincronización:", o), { updated: 0, added: 0, skipped: 0 };
     }
-  }), P.handle("purge-deleted-categories", async () => {
+  }), $.handle("purge-deleted-categories", async () => {
     try {
       console.log("Manejador: Purgando categorías eliminadas");
       const e = await pr();
@@ -1461,7 +1502,7 @@ async function hr() {
   try {
     console.log("Inicializando base de datos..."), await Je(), console.log("Base de datos inicializada correctamente");
     try {
-      await fr(R.getQueryInterface(), F), console.log("Migración addDescription aplicada correctamente");
+      await fr(N.getQueryInterface(), F), console.log("Migración addDescription aplicada correctamente");
       try {
         console.log("Intentando cargar el script de migración deletedLocally...");
         let e = null;
@@ -1470,8 +1511,8 @@ async function hr() {
           "./scripts/add-deletedLocally-to-categories.js",
           "../resources/scripts/add-deletedLocally-to-categories.js",
           w.join(A.getAppPath(), "scripts/add-deletedLocally-to-categories.js"),
-          w.join(j, "../scripts/add-deletedLocally-to-categories.js"),
-          w.join(j, "../../scripts/add-deletedLocally-to-categories.js")
+          w.join(O, "../scripts/add-deletedLocally-to-categories.js"),
+          w.join(O, "../../scripts/add-deletedLocally-to-categories.js")
         ];
         for (const o of r)
           try {
@@ -1487,7 +1528,7 @@ async function hr() {
         else {
           console.warn("No se pudo cargar el módulo de migración. Verificando column manualmente");
           try {
-            (await R.getQueryInterface().describeTable("Categories")).deletedLocally ? console.log("La columna deletedLocally ya existe") : (console.log("Añadiendo columna deletedLocally directamente"), await R.getQueryInterface().addColumn("Categories", "deletedLocally", {
+            (await N.getQueryInterface().describeTable("Categories")).deletedLocally ? console.log("La columna deletedLocally ya existe") : (console.log("Añadiendo columna deletedLocally directamente"), await N.getQueryInterface().addColumn("Categories", "deletedLocally", {
               type: F.BOOLEAN,
               defaultValue: !1
             }), console.log("Columna deletedLocally añadida correctamente"));
@@ -1536,17 +1577,17 @@ async function hr() {
   }
 }
 A.whenReady().then(async () => {
-  console.log("Aplicación inicializando..."), console.log("Ambiente:", v.env.NODE_ENV || "development"), console.log("Directorio de la aplicación:", j), console.log("Ruta de dist:", z);
+  console.log("Aplicación inicializando..."), console.log("Ambiente:", v.env.NODE_ENV || "development"), console.log("Directorio de la aplicación:", O), console.log("Ruta de dist:", q);
   try {
     console.log(
       "Archivo index.html existe:",
-      I.existsSync(w.join(z, "index.html"))
+      x.existsSync(w.join(q, "index.html"))
     ), console.log("Listado de directorios:");
     try {
-      const e = w.join(j, "../../");
-      console.log("Contenido de directorio raíz:", I.readdirSync(e)), I.existsSync(w.join(j, "../dist")) && console.log(
+      const e = w.join(O, "../../");
+      console.log("Contenido de directorio raíz:", x.readdirSync(e)), x.existsSync(w.join(O, "../dist")) && console.log(
         "Contenido de ../dist:",
-        I.readdirSync(w.join(j, "../dist"))
+        x.readdirSync(w.join(O, "../dist"))
       );
     } catch (e) {
       console.error("Error al listar directorios:", e);
@@ -1565,7 +1606,7 @@ A.whenReady().then(async () => {
     console.error("Error al configurar IPC handlers:", e);
   }
   try {
-    Pe(), console.log("Ventana creada con éxito");
+    $e(), console.log("Ventana creada con éxito");
   } catch (e) {
     console.error("Error al crear ventana:", e);
   }
@@ -1574,7 +1615,7 @@ A.on("window-all-closed", function() {
   v.platform !== "darwin" && A.quit();
 });
 A.on("activate", function() {
-  T === null && Pe();
+  T === null && $e();
 });
 v.on("uncaughtException", (e) => {
   console.error("Error no capturado:", e);

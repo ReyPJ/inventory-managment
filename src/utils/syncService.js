@@ -520,9 +520,16 @@ export const fullSyncProcess = async (localProducts, localCategories = []) => {
             console.log(`  Categoría: category_id=${p.category_id}, CategoryId=${p.CategoryId}`);
           }
           console.log('===========================================');
+
           
           // Asegurar que los productos nuevos tengan correctamente asignada la categoría
           productSyncResult.created.forEach(product => {
+            // Verificar si el ID es válido, si no, eliminarlo para que la base de datos asigne uno nuevo
+            if (!product.id || product.id === 'N/A' || product.id === '') {
+              console.log(`Corrigiendo producto con ID inválido: ${product.name} (${product.barcode})`);
+              delete product.id;
+            }
+            
             // Si tiene CategoryId pero no category_id, o viceversa, sincronizarlos
             if (product.CategoryId && !product.category_id) {
               product.category_id = Number(product.CategoryId);
@@ -569,6 +576,12 @@ export const fullSyncProcess = async (localProducts, localCategories = []) => {
             console.log(`  ID: ${p.id}, Barcode: ${p.barcode}, Nombre: ${p.name}`);
             console.log(`  Categoría: category_id=${p.category_id}, CategoryId=${p.CategoryId}`);
             
+            // Verificar si el ID es válido, si no, eliminarlo para que la base de datos asigne uno nuevo
+            if (!p.id || p.id === 'N/A' || p.id === '') {
+              console.log(`Corrigiendo producto actualizado con ID inválido: ${p.name} (${p.barcode})`);
+              delete p.id;
+            }
+            
             // Si tiene una versión local, mostrar la diferencia
             if (p.barcode && localProductMap[p.barcode]) {
               const localP = localProductMap[p.barcode];
@@ -579,6 +592,12 @@ export const fullSyncProcess = async (localProducts, localCategories = []) => {
           
           // Asegurar que los productos actualizados tengan correctamente asignada la categoría
           productSyncResult.updated.forEach(product => {
+            // Verificar si el ID es válido, si no, eliminarlo para que la base de datos asigne uno nuevo
+            if (!product.id || product.id === 'N/A' || product.id === '') {
+              console.log(`Corrigiendo producto actualizado con ID inválido: ${product.name} (${product.barcode})`);
+              delete product.id;
+            }
+            
             // Si tiene CategoryId pero no category_id, o viceversa, sincronizarlos
             if (product.CategoryId && !product.category_id) {
               product.category_id = Number(product.CategoryId);
@@ -760,6 +779,12 @@ const mergeProducts = (localProducts, serverProducts) => {
 
   // Agregar productos del servidor que no existen localmente
   serverProducts.forEach((serverProduct) => {
+    // Verificación y corrección de ID inválido
+    if (!serverProduct.id || serverProduct.id === 'N/A' || serverProduct.id === '') {
+      console.log(`Detectado producto del servidor con ID inválido: ${serverProduct.name} (${serverProduct.barcode})`);
+      // No eliminamos el ID aquí para mantener la referencia, se eliminará antes de insertar en BD
+    }
+    
     if (!localProductMap[serverProduct.barcode]) {
       // Es un producto nuevo del servidor
       // Asegurarse de que tanto category_id como CategoryId estén presentes

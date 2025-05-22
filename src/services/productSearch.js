@@ -191,8 +191,8 @@ export const searchProductByBarcode = async (barcode) => {
 
             // Acortar descripción si existe
             const shortDesc = item.description
-              ? item.description.substring(0, 150) +
-                (item.description.length > 150 ? "..." : "")
+              ? item.description.substring(0, 500) +
+                (item.description.length > 500 ? "..." : "")
               : "";
 
             // Obtener precio si existe

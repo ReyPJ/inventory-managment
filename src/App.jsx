@@ -771,11 +771,32 @@ function App() {
         // Eliminar físicamente las categorías marcadas como eliminadas
         const purgedCategoriesCount = await purgeDeletedCategories();
         
-        toast.success(
-          `Sincronización completada:\n` +
+        // Mensaje básico de sincronización
+        let syncMessage = `Sincronización completada:\n` +
           `Productos: ${updateResult.updated} actualizados, ${updateResult.added} agregados, ${updateResult.skipped || 0} omitidos, ${purgedProductsCount} purgados\n` +
-          `Categorías: ${categoryUpdateResult?.updated || 0} actualizadas, ${categoryUpdateResult?.added || 0} agregadas, ${categoryUpdateResult?.skipped || 0} omitidas, ${purgedCategoriesCount || 0} purgadas`
-        );
+          `Categorías: ${categoryUpdateResult?.updated || 0} actualizadas, ${categoryUpdateResult?.added || 0} agregadas, ${categoryUpdateResult?.skipped || 0} omitidas, ${purgedCategoriesCount || 0} purgadas`;
+        
+        // Si hay productos omitidos, agregar detalle
+        if (updateResult.skipped > 0 && updateResult.skippedProducts?.length > 0) {
+          // Agregar hasta 4 productos omitidos para no hacer el mensaje demasiado largo
+          const maxToShow = Math.min(updateResult.skippedProducts.length, 4);
+          syncMessage += `\n\nDetalle de productos omitidos:`;
+          
+          for (let i = 0; i < maxToShow; i++) {
+            const p = updateResult.skippedProducts[i];
+            syncMessage += `\n- ${p.name || p.barcode}: ${p.reason}`;
+          }
+          
+          // Si hay más productos omitidos, indicarlo
+          if (updateResult.skippedProducts.length > maxToShow) {
+            syncMessage += `\n- Y ${updateResult.skippedProducts.length - maxToShow} más...`;
+          }
+          
+          // Mostrar mensaje en consola para referencia completa
+          console.log("Lista completa de productos omitidos:", updateResult.skippedProducts);
+        }
+        
+        toast.success(syncMessage);
         
         // Recargar los datos para reflejar los cambios
         await loadData();

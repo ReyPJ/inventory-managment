@@ -119,7 +119,7 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
   
   const handleDescriptionChange = (e) => {
     const value = e.target.value;
-    if (value.length <= 500) {
+    if (value.length <= 2000) {
       setFormData(prev => ({ ...prev, description: value }));
       
       if (formErrors.description) {
@@ -349,8 +349,11 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
                 rows="4"
                 ref={descriptionRef}
               ></textarea>
-              <span className="character-counter">
-                {formData.description.length}/500
+              <span className={`character-counter ${
+                formData.description.length > 1800 ? 'danger' :
+                formData.description.length > 1500 ? 'warning' : ''
+              }`}>
+                {formData.description.length}/2000
               </span>
             </div>
           </div>

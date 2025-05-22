@@ -202,6 +202,19 @@
   background-color: rgba(0, 0, 0, 0.3);
   padding: 2px 5px;
   border-radius: 3px;
+  transition: all 0.3s ease;
+}
+
+.character-counter.warning {
+  color: var(--warning-color);
+  opacity: 1;
+  background-color: rgba(255, 193, 7, 0.2);
+}
+
+.character-counter.danger {
+  color: var(--danger-color);
+  opacity: 1;
+  background-color: rgba(220, 53, 69, 0.2);
 }
 
 .form-error {

@@ -164,6 +164,9 @@ export async function updateProductsAfterSync(syncResults) {
     let updated = 0;
     let added = 0;
     let skipped = 0;
+    
+    // Array para almacenar información sobre los productos omitidos
+    const skippedProducts = [];
 
     // Crear un mapa de categorías por ID para referencia rápida
     const categoriesMap = {};
@@ -216,6 +219,14 @@ export async function updateProductsAfterSync(syncResults) {
           }
         } catch (error) {
           console.error(`Error al actualizar producto creado ${syncedProduct.barcode}:`, error);
+          // Registrar este producto omitido con su razón
+          skippedProducts.push({
+            barcode: syncedProduct.barcode,
+            name: syncedProduct.name || 'Nombre desconocido',
+            reason: "error_actualizacion_producto_creado",
+            error: error.message
+          });
+          skipped++;
         }
       }
     }
@@ -257,6 +268,14 @@ export async function updateProductsAfterSync(syncResults) {
           }
         } catch (error) {
           console.error(`Error al actualizar producto ${syncedProduct.barcode}:`, error);
+          // Registrar este producto omitido con su razón
+          skippedProducts.push({
+            barcode: syncedProduct.barcode,
+            name: syncedProduct.name || 'Nombre desconocido',
+            reason: "error_actualizacion_producto_existente",
+            error: error.message
+          });
+          skipped++;
         }
       }
     }
@@ -289,6 +308,13 @@ export async function updateProductsAfterSync(syncResults) {
             console.log(
               `Producto con barcode ${serverProduct.barcode} no agregado porque fue eliminado localmente`
             );
+            // Registrar este producto omitido con su razón
+            skippedProducts.push({
+              barcode: serverProduct.barcode,
+              name: serverProduct.name,
+              reason: "eliminado_localmente",
+              id: serverProduct.id
+            });
             skipped++;
             continue;
           }
@@ -309,12 +335,27 @@ export async function updateProductsAfterSync(syncResults) {
               // Usar CategoryId si está disponible, sino usar category_id
               const categoryId = serverProduct.CategoryId || serverProduct.category_id;
               
+              // Si la categoría es inválida, no asignarla
+              if (categoryId === 'N/A' || categoryId === null || categoryId === undefined) {
+                console.log(`Categoría inválida para producto ${serverProduct.name}: ${categoryId}`);
+                productData.CategoryId = null;
+              }
               // Comprobar si la categoría existe en la base de datos local
-              if (categoriesMap[categoryId]) {
+              else if (categoriesMap[categoryId]) {
                 console.log(`Asignando categoría ${categoryId} a nuevo producto ${serverProduct.name}`);
                 productData.CategoryId = categoryId;
               } else {
                 console.log(`Categoría ${categoryId} no encontrada para producto ${serverProduct.name}`);
+                console.log(`CATEGORÍA FALTANTE: El producto ${serverProduct.name} (${serverProduct.barcode}) requiere la categoría ID=${categoryId} que no existe localmente`);
+                
+                // Registrar este producto como omitido por falta de categoría
+                skippedProducts.push({
+                  barcode: serverProduct.barcode,
+                  name: serverProduct.name,
+                  reason: "categoria_no_encontrada",
+                  categoryId: categoryId
+                });
+                
                 productData.CategoryId = null; // Establecer explícitamente como null
               }
             } else {
@@ -322,16 +363,41 @@ export async function updateProductsAfterSync(syncResults) {
             }
 
             // Es un producto nuevo del servidor, agregarlo localmente
-            const newProduct = await Product.create(productData);
-            
-            // Log detallado del producto creado
-            console.log(`Producto creado: ${JSON.stringify({
-              id: newProduct.id,
-              name: newProduct.name,
-              CategoryId: newProduct.CategoryId
-            })}`);
-            
-            added++;
+            try {
+              // Verificar y corregir ID antes de crear
+              if (!productData.id || productData.id === 'N/A') {
+                console.log(`⚠️ PRODUCTO SIN ID: ${productData.name} (${productData.barcode})`);
+                // Asegurarnos de no enviar un ID inválido
+                delete productData.id;
+              }
+              
+              const newProduct = await Product.create(productData);
+              
+              // Log detallado del producto creado
+              console.log(`Producto creado: ${JSON.stringify({
+                id: newProduct.id,
+                name: newProduct.name,
+                CategoryId: newProduct.CategoryId
+              })}`);
+              
+              added++;
+            } catch (createError) {
+              console.error(`Error al crear producto ${productData.name} (${productData.barcode}):`, createError);
+              console.error(`Detalles del producto con error:`, JSON.stringify(productData, null, 2));
+              
+              // Registrar este producto como omitido por error de validación
+              skippedProducts.push({
+                barcode: serverProduct.barcode,
+                name: serverProduct.name,
+                reason: "error_validacion",
+                error: createError.message,
+                details: {
+                  id: productData.id || 'N/A',
+                  fields: Object.keys(productData).join(', ')
+                }
+              });
+              skipped++;
+            }
           } else {
             // El producto ya existe, podríamos actualizar su CategoryId si es necesario
             // Verificar si el producto del servidor tiene CategoryId y si difiere del local
@@ -355,12 +421,36 @@ export async function updateProductsAfterSync(syncResults) {
           }
         } catch (error) {
           console.error(`Error procesando producto ${serverProduct.barcode}:`, error);
+          // Registrar este producto omitido con su razón
+          skippedProducts.push({
+            barcode: serverProduct.barcode,
+            name: serverProduct.name || 'Nombre desconocido',
+            reason: "error_procesamiento",
+            error: error.message
+          });
           skipped++;
         }
       }
     }
 
-    return { updated, added, skipped };
+    // Log detallado de productos omitidos
+    if (skippedProducts.length > 0) {
+      console.log(`==========================================`);
+      console.log(`DETALLE DE PRODUCTOS OMITIDOS (${skippedProducts.length}):`);
+      skippedProducts.forEach((product, index) => {
+        console.log(`Producto omitido #${index + 1}:`);
+        console.log(`  ID: ${product.id || 'N/A'}`);
+        console.log(`  Barcode: ${product.barcode}`);
+        console.log(`  Nombre: ${product.name}`);
+        console.log(`  Razón: ${product.reason}`);
+        if (product.error) {
+          console.log(`  Error: ${product.error}`);
+        }
+      });
+      console.log(`==========================================`);
+    }
+
+    return { updated, added, skipped, skippedProducts };
   } catch (err) {
     console.error(
       "Error al actualizar productos después de sincronización:",
