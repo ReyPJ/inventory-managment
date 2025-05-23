@@ -1,7 +1,7 @@
 // Servicio para manejar las comunicaciones con la API externa
 
 // URL base de la API
-const API_URL = "http://localhost:8000/api"; // Cambiar esto por la URL real de la API
+const API_URL = "https://apilogisctica.com/api/api"; // Cambiar esto por la URL real de la API
 
 // Variable para almacenar los tokens
 let authTokens = {
