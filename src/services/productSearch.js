@@ -106,15 +106,32 @@ const searchGoogleDirect = async (barcode) => {
 };
 
 // Función para buscar un producto por código de barras
-export const searchProductByBarcode = async (barcode) => {
+export const searchProductByBarcode = async (barcode, statusCallback) => {
   try {
     // Preparamos resultados vacíos iniciales
     let productFound = null;
 
+    // Informar del estado si hay callback
+    if (statusCallback) statusCallback("Verificando conexión a internet...");
+
+    // Verificar conexión a internet
+    const hasInternet = await checkInternetConnection();
+    if (!hasInternet) {
+      if (statusCallback) statusCallback("Sin conexión a internet");
+      return {
+        name: `Producto ${barcode}`,
+        description: "Sin conexión a internet para buscar información",
+        barcode: barcode,
+        price: "Precio no encontrado",
+        imageUrl: null,
+        searchFailed: true,
+      };
+    }
+
     // Caso especial: Si es un ISBN, intentar primero con Open Library
     if (barcode.length === 10 || barcode.length === 13) {
       try {
-        console.log("Intentando búsqueda como ISBN...");
+        if (statusCallback) statusCallback("Buscando como ISBN...");
         const isbnResponse = await fetch(
           `https://openlibrary.org/api/books?bibkeys=ISBN:${barcode}&format=json&jscmd=data`
         );
@@ -141,7 +158,7 @@ export const searchProductByBarcode = async (barcode) => {
     if (!productFound) {
       // Intentamos la API Open Food Facts que generalmente no tiene problemas de CORS
       try {
-        console.log("Intentando búsqueda en Open Food Facts...");
+        if (statusCallback) statusCallback("Buscando producto alimenticio...");
         const response = await fetch(
           `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`
         );
@@ -171,7 +188,7 @@ export const searchProductByBarcode = async (barcode) => {
     if (!productFound) {
       // Intentamos UPC Item DB
       try {
-        console.log("Intentando búsqueda con UPC Item DB...");
+        if (statusCallback) statusCallback("Buscando en base de datos UPC...");
         // Usamos allorigins.win como proxy para evitar CORS
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(
           `https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`
@@ -220,7 +237,7 @@ export const searchProductByBarcode = async (barcode) => {
 
     if (!productFound) {
       // Última opción: búsqueda mediante Google/Bing
-      console.log("Intentando búsqueda web directa...");
+      if (statusCallback) statusCallback("Buscando información en la web...");
       const directSearchResult = await searchGoogleDirect(barcode);
       if (directSearchResult) {
         console.log("Producto encontrado en búsqueda web:", directSearchResult);
@@ -229,6 +246,8 @@ export const searchProductByBarcode = async (barcode) => {
     }
 
     // Si todo falla, devolvemos un producto genérico
+    if (statusCallback)
+      statusCallback("No se encontró información del producto");
     console.log("Generando información genérica para:", barcode);
     return {
       name: `Producto ${barcode}`,
@@ -236,9 +255,11 @@ export const searchProductByBarcode = async (barcode) => {
       barcode: barcode,
       price: "Precio no encontrado",
       imageUrl: null,
+      searchFailed: true,
     };
   } catch (error) {
     console.error("Error crítico buscando producto:", error);
+    if (statusCallback) statusCallback("Error en la búsqueda");
     // En caso de error crítico, devolvemos igualmente un resultado para no bloquear la UI
     return {
       name: `Producto ${barcode}`,
@@ -246,6 +267,7 @@ export const searchProductByBarcode = async (barcode) => {
       barcode: barcode,
       price: "Precio no encontrado",
       imageUrl: null,
+      searchFailed: true,
     };
   }
 };

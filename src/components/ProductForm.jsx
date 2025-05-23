@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import '../styles/ProductForm.css';
-import { searchProductByBarcode } from '../utils/barcodeSearch';
+import { searchProductByBarcode } from '../services/productSearch';
 import { FaSearch } from 'react-icons/fa';
 import { MdCancel } from 'react-icons/md';
 import { toast } from 'react-toastify';
@@ -19,7 +19,7 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
     description: '',
     price: '',
     stock: '',
-    CategoryId: categories && categories.length > 0 ? categories[0].id.toString() : '1' // Valor por defecto
+    category: categories && categories.length > 0 ? categories[0].id.toString() : '1' // Valor por defecto
   });
   
   const [formErrors, setFormErrors] = useState({});
@@ -34,7 +34,7 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
         description: product.description || '',
         price: product.price ? product.price.toString() : '',
         stock: product.stock ? product.stock.toString() : '',
-        CategoryId: product.CategoryId ? product.CategoryId.toString() : 
+        category: product.category ? product.category.toString() : 
                   (categories && categories.length > 0 ? categories[0].id.toString() : '1')
       });
 
@@ -191,7 +191,7 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
         description: formData.description,
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
-        CategoryId: parseInt(formData.CategoryId)
+        category: parseInt(formData.category)
       };
       
       console.log('Guardando producto:', productData);
@@ -200,38 +200,63 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
       await onSave(productData);
       
     } catch (error) {
-      console.error('Error al guardar el producto:', error);
+      console.error('Error al guardar:', error);
+      toast.error('Error al guardar el producto');
     } finally {
       setIsSubmitting(false);
     }
   };
   
   const handleKeyPress = (e) => {
-    // Si se presiona Enter en el campo de código de barras, realizar la búsqueda
-    if (e.key === 'Enter' && e.target.name === 'barcode') {
+    // Si se presiona Enter en el campo de código de barras y el formulario es nuevo, buscar en línea
+    if (e.key === 'Enter' && e.target.name === 'barcode' && !formData.id) {
       e.preventDefault();
       handleBarcodeSearch();
     }
   };
   
   return (
-    <div className="product-form-container">
-      <div className="product-form-header">
-        <h2>{formData.id ? 'Editar Producto' : 'Nuevo Producto'}</h2>
-        <button 
-          className="close-button" 
-          onClick={onCancel}
-          aria-label="Cerrar"
-        >
-          ×
-        </button>
+    <div className="product-form">
+      <div className="form-header">
+        <h2>{product?.id ? 'Editar Producto' : 'Nuevo Producto'}</h2>
+        {isSearching && <span className="search-status">{searchStatus}</span>}
       </div>
       
-      <form className="product-form" onSubmit={handleSubmit}>
+      {searchResult && (
+        <div className="search-result">
+          <div className="search-result-header">
+            <h3>Producto encontrado en línea</h3>
+            <div className="search-result-actions">
+              <button 
+                onClick={handleUseSearchResult}
+                className="use-result-button"
+                title="Usar esta información"
+              >
+                Usar
+              </button>
+              <button 
+                onClick={handleCancelSearch}
+                className="cancel-search-button"
+                title="Cancelar búsqueda"
+              >
+                <MdCancel />
+              </button>
+            </div>
+          </div>
+          <div className="search-result-content">
+            <p><strong>Nombre:</strong> {searchResult.name}</p>
+            {searchResult.description && (
+              <p><strong>Descripción:</strong> {searchResult.description}</p>
+            )}
+          </div>
+        </div>
+      )}
+      
+      <form onSubmit={handleSubmit}>
         <div className="form-row">
-          <div className="input-group">
-            <label htmlFor="barcode">Código de Barras</label>
-            <div className="barcode-group">
+          <div className="form-group">
+            <label htmlFor="barcode">Código de Barras*</label>
+            <div className="barcode-input-group">
               <input
                 type="text"
                 id="barcode"
@@ -239,190 +264,115 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
                 value={formData.barcode}
                 onChange={handleChange}
                 onKeyPress={handleKeyPress}
-                placeholder="Escanee o ingrese el código"
                 ref={barcodeInputRef}
-                autoFocus
+                required
+                placeholder="Ingrese o escanee el código"
+                disabled={isSubmitting || !!product?.id}
+                className={formErrors.barcode ? 'input-error' : ''}
               />
-              {isSearching ? (
-                <div className="search-status">
-                  <div className="spinner"></div>
-                  <span>{searchStatus}</span>
-                  <button
-                    type="button"
-                    className="barcode-cancel-btn"
-                    onClick={() => {
-                      setIsSearching(false);
-                      setSearchStatus('');
-                    }}
-                  >
-                    <MdCancel style={{ fontSize: '18px', marginRight: '5px' }} />
-                    Cancelar
-                  </button>
-                </div>
-              ) : (
+              {!product?.id && (
                 <button
                   type="button"
-                  className="barcode-search-btn"
                   onClick={handleBarcodeSearch}
-                  disabled={formData.barcode.trim() === '' || isSearching}
+                  disabled={isSearching || !formData.barcode.trim()}
+                  className="search-button"
+                  title="Buscar información"
                 >
-                  <FaSearch style={{ fontSize: '16px', marginRight: '5px' }} />
-                  Buscar
+                  <FaSearch />
                 </button>
               )}
             </div>
-            {formErrors.barcode && <div className="form-error">{formErrors.barcode}</div>}
+            {formErrors.barcode && <div className="error-message">{formErrors.barcode}</div>}
           </div>
           
-          {/* Nombre del producto */}
-          <div className="input-group">
-            <label htmlFor="name">Nombre del Producto</label>
+          <div className="form-group">
+            <label htmlFor="name">Nombre*</label>
             <input
               type="text"
               id="name"
               name="name"
               value={formData.name}
               onChange={handleChange}
+              required
               placeholder="Nombre del producto"
+              disabled={isSubmitting}
+              className={formErrors.name ? 'input-error' : ''}
             />
-            {formErrors.name && <div className="form-error">{formErrors.name}</div>}
+            {formErrors.name && <div className="error-message">{formErrors.name}</div>}
+          </div>
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="description">Descripción</label>
+          <textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={handleDescriptionChange}
+            placeholder="Descripción opcional del producto"
+            rows="3"
+            disabled={isSubmitting}
+            ref={descriptionRef}
+          ></textarea>
+        </div>
+        
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="price">Precio*</label>
+            <input
+              type="text"
+              id="price"
+              name="price"
+              value={formData.price}
+              onChange={handleChange}
+              required
+              placeholder="Ej. 1000"
+              disabled={isSubmitting}
+              className={formErrors.price ? 'input-error' : ''}
+            />
+            {formErrors.price && <div className="error-message">{formErrors.price}</div>}
           </div>
           
-          {/* Precio de venta */}
-          <div className="input-group">
-            <label htmlFor="price">Precio</label>
-            <div className="price-input-group">
-              <span className="currency-symbol">$</span>
-              <input
-                type="text"
-                id="price"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
-                placeholder="0.00"
-              />
-            </div>
-            {formErrors.price && <div className="form-error">{formErrors.price}</div>}
-          </div>
-          
-          {/* Stock */}
-          <div className="input-group">
-            <label htmlFor="stock">Cantidad en Inventario</label>
+          <div className="form-group">
+            <label htmlFor="stock">Cantidad*</label>
             <input
               type="text"
               id="stock"
               name="stock"
               value={formData.stock}
               onChange={handleChange}
-              placeholder="0"
+              required
+              placeholder="Cantidad en inventario"
+              disabled={isSubmitting}
+              className={formErrors.stock ? 'input-error' : ''}
             />
-            {formErrors.stock && <div className="form-error">{formErrors.stock}</div>}
+            {formErrors.stock && <div className="error-message">{formErrors.stock}</div>}
           </div>
           
-          {/* Categoría */}
-          <div className="input-group">
-            <label htmlFor="CategoryId">Categoría</label>
+          <div className="form-group">
+            <label htmlFor="category">Categoría</label>
             <select
-              id="CategoryId"
-              name="CategoryId"
-              value={formData.CategoryId}
+              id="category"
+              name="category"
+              value={formData.category}
               onChange={handleChange}
+              disabled={isSubmitting}
             >
-              {categories && categories.map(category => (
-                <option key={category.id} value={category.id.toString()}>
+              {categories.map(category => (
+                <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
               ))}
             </select>
           </div>
-          
-          {/* Descripción (ocupa todo el ancho) */}
-          <div className="input-group full-width">
-            <label htmlFor="description">Descripción</label>
-            <div className="description-container">
-              <textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleDescriptionChange}
-                placeholder="Descripción del producto"
-                rows="4"
-                ref={descriptionRef}
-              ></textarea>
-              <span className={`character-counter ${
-                formData.description.length > 1800 ? 'danger' :
-                formData.description.length > 1500 ? 'warning' : ''
-              }`}>
-                {formData.description.length}/2000
-              </span>
-            </div>
-          </div>
         </div>
         
-        {/* Resultado de búsqueda en línea */}
-        {searchResult && (
-          <div className="search-result">
-            <div className="search-result-header">
-              <h3>Producto encontrado en línea:</h3>
-              <div className="search-result-actions">
-                <button
-                  type="button"
-                  className="result-action-btn primary"
-                  onClick={handleUseSearchResult}
-                >
-                  Usar esta información
-                </button>
-                <button
-                  type="button"
-                  className="result-action-btn secondary"
-                  onClick={handleCancelSearch}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-            
-            <div className="search-result-content">
-              {searchResult.links && searchResult.links.length > 0 ? (
-                <div className="search-result-links">
-                  <h4>Referencias encontradas:</h4>
-                  <ul>
-                    {searchResult.links.map((link, index) => (
-                      <li key={index}>
-                        <a 
-                          href={link.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                        >
-                          {link.title || `Referencia ${index + 1}`}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
-                <>
-                  <p><strong>Nombre:</strong> {searchResult.name}</p>
-                  {searchResult.isHTML ? (
-                    <p>
-                      <strong>Descripción:</strong> 
-                      <span dangerouslySetInnerHTML={{ __html: searchResult.description }} />
-                    </p>
-                  ) : (
-                    <p><strong>Descripción:</strong> {searchResult.description}</p>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        )}
-        
-        {/* Botones de acción */}
         <div className="form-actions">
           <button
             type="button"
-            className="cancel-button"
             onClick={onCancel}
+            className="cancel-button"
+            disabled={isSubmitting}
           >
             Cancelar
           </button>
@@ -431,7 +381,7 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
             className="save-button"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Guardando...' : 'Guardar Producto'}
+            {isSubmitting ? 'Guardando...' : product?.id ? 'Actualizar' : 'Guardar'}
           </button>
         </div>
       </form>

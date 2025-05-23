@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { 
-  getAllActiveProducts,
+  getAllProducts,
   getAllCategories, 
   createProduct, 
   updateProduct,
@@ -10,20 +10,19 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
-  updateProductsAfterSync,
-  purgeDeletedProducts,
-  updateCategoriesAfterSync,
-  purgeDeletedCategories
-} from './utils/ipcRenderer';
+  isAuthenticated,
+  getCurrentUser,
+  logout
+} from './services/apiService';
 import './styles/App.css';
 import ProductForm from './components/ProductForm';
 import ProductDetails from './components/ProductDetails';
 import CategoryManagement from './components/CategoryManagement';
 import InventoryStats from './components/InventoryStats';
-import SyncSettings from './components/SyncSettings';
+import Login from './components/Login';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { loadSavedConfig } from './utils/syncService';
+import { searchProductByBarcode, checkInternetConnection } from './services/productSearch';
 
 function App() {
   const [products, setProducts] = useState([]);
@@ -44,33 +43,39 @@ function App() {
   const [productToConfirm, setProductToConfirm] = useState(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [removeQuantity, setRemoveQuantity] = useState(1);
-  const [showSyncSettings, setShowSyncSettings] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
   const barcodeInputRef = useRef(null);
   const dropdownRef = useRef(null);
   const [hasShownWelcome, setHasShownWelcome] = useState(false);
   
-  // Cargar datos iniciales
+  // Comprobar autenticación y cargar datos iniciales
   useEffect(() => {
-    loadData();
+    if (isAuthenticated()) {
+      setAuthenticated(true);
+      loadData();
+    }
   }, []);
   
   // Función para cargar o recargar los datos
   const loadData = async () => {
     setLoading(true);
     try {
-      console.log("🔍 Cargando productos activos...");
-      // Usar getAllActiveProducts para excluir productos eliminados localmente
-      const productsData = await getAllActiveProducts();
+      console.log("🔍 Cargando productos desde la API...");
+      const productsData = await getAllProducts();
       console.log(`✅ Productos cargados: ${productsData.length}`, productsData);
       setProducts(productsData);
       
-      console.log("🔍 Cargando categorías...");
+      console.log("🔍 Cargando categorías desde la API...");
       const categoriesData = await getAllCategories();
       console.log(`✅ Categorías cargadas: ${categoriesData.length}`, categoriesData);
       setCategories(categoriesData);
       
-      // Verificar si hay configuración de sincronización
-      loadSavedConfig();
+      // Mostrar mensaje de bienvenida
+      if (!hasShownWelcome) {
+        const username = getCurrentUser();
+        toast.success(`¡Bienvenido, ${username}!`);
+        setHasShownWelcome(true);
+      }
     } catch (err) {
       console.error("❌ ERROR AL CARGAR DATOS:", err);
       setError(err.message || 'Error al cargar datos');
@@ -116,6 +121,8 @@ function App() {
   // Filtrar por categoría
   useEffect(() => {
     const filterProductsByCategory = async () => {
+      if (!authenticated) return;
+      
       console.log(`🔍 Filtrando por categoría: ${selectedCategory === 'all' ? 'Todas' : 'ID: ' + selectedCategory}`);
       
       if (selectedCategory === 'all') {
@@ -131,13 +138,13 @@ function App() {
       try {
         setLoading(true);
         setError(null);
-        // Cargamos todos y filtramos en el cliente
-        console.log("📋 Obteniendo todos los productos activos para filtrar...");
-        const allProducts = await getAllActiveProducts();
+        // Cargamos todos y filtramos por categoría
+        console.log("📋 Obteniendo todos los productos para filtrar...");
+        const allProducts = await getAllProducts();
         console.log(`📦 Productos obtenidos: ${allProducts.length}`);
         
         const filtered = allProducts.filter(
-          product => product.CategoryId === parseInt(selectedCategory)
+          product => product.category === parseInt(selectedCategory)
         );
         console.log(`🔍 Productos filtrados: ${filtered.length} para categoría ID: ${selectedCategory}`);
         
@@ -153,8 +160,10 @@ function App() {
       }
     };
     
-    filterProductsByCategory();
-  }, [selectedCategory, searchTerm]);
+    if (authenticated) {
+      filterProductsByCategory();
+    }
+  }, [selectedCategory, searchTerm, authenticated]);
 
   // Manejar el formulario de agregar rápido
   const handleQuickAddForm = () => {
@@ -203,8 +212,7 @@ function App() {
     };
   }, [showQuickAdd]);
 
-  // Buscar producto por código de barras, luego, si existe preguntar si quiere agregar 1 al stock
-  // actual del producto (sera un boton de agregado rapido)
+  // Buscar producto por código de barras para agregar stock
   const handleQuickAdd = async () => {
     if (!barcodeInput.trim()) {
       toast.warning('Por favor ingresa un código de barras', {
@@ -250,952 +258,729 @@ function App() {
       setLoading(false);
     }
   };
-  
-  // Agregar la función para completar la acción después de confirmar
+
+  // Manejar confirmación de acciones como agregar/quitar stock
   const handleConfirmAction = async () => {
+    if (!productToConfirm) return;
+    
     try {
-      if (!productToConfirm) return;
-      
       setLoading(true);
-      const oldStock = productToConfirm.stock;
-      const newStock = oldStock + 1;
       
-      // Mostrar un toast claro ANTES de actualizar (para asegurar que se ve)
-      toast.info(
-        <div>
-          <strong>Agregando unidad...</strong>
-          <div className="toast-details">
-            Producto: {productToConfirm.name}
-          </div>
-        </div>,
-        {
-          icon: "⏳",
-          autoClose: 2000
-        }
-      );
-      
-      // Actualizar el producto
-      await updateProduct(productToConfirm.id, { stock: newStock });
-      
-      // Recargar datos
-      await loadData();
-      
-      // Toast de CONFIRMACIÓN después de actualizar
-      setTimeout(() => {
+      if (confirmAction === 'quickAdd') {
+        // Actualizar stock sumando 1
+        const updatedProduct = {
+          ...productToConfirm,
+          stock: productToConfirm.stock + 1
+        };
+        
+        await updateProduct(productToConfirm.id, updatedProduct);
+        
         toast.success(
           <div>
-            <strong>¡Producto actualizado con éxito!</strong>
+            <strong>Stock actualizado</strong>
             <div className="toast-details">
-              Se agregó 1 unidad de {productToConfirm.name}
-              <br />
-              Stock anterior: {oldStock} → Nuevo stock: {newStock}
+              {productToConfirm.name} ahora tiene {updatedProduct.stock} unidades
             </div>
-          </div>,
+          </div>, 
           {
             icon: "✅",
-            autoClose: 5000
+            autoClose: 3000
           }
         );
-      }, 500);
-      
-      // Limpiar estados
-      setProductToConfirm(null);
-      setConfirmAction(null);
-      setShowQuickAdd(false);
-      setBarcodeInput('');
+        
+        // Limpiar y resetear para la próxima entrada
+        setBarcodeInput('');
+        setProductToConfirm(null);
+        setConfirmAction(null);
+        
+        // Recargar datos para reflejar el cambio
+        await loadData();
+        
+        // Volver a enfocar el input para facilitar escaneos continuos
+        if (barcodeInputRef.current) {
+          barcodeInputRef.current.focus();
+        }
+      } else if (confirmAction === 'quickRemove') {
+        // Actualizar stock restando la cantidad especificada
+        const newStock = Math.max(0, productToConfirm.stock - removeQuantity);
+        const updatedProduct = {
+          ...productToConfirm,
+          stock: newStock
+        };
+        
+        await updateProduct(productToConfirm.id, updatedProduct);
+        
+        toast.success(`Stock de "${productToConfirm.name}" actualizado a ${newStock} unidades`);
+        
+        // Limpiar y resetear
+        setShowRemoveConfirm(false);
+        setProductToConfirm(null);
+        setConfirmAction(null);
+        setRemoveQuantity(1);
+        
+        // Recargar datos
+        await loadData();
+      }
     } catch (error) {
-      console.error('Error al actualizar producto:', error);
-      toast.error('Error al actualizar el inventario', {
-        autoClose: 4000
-      });
+      console.error('Error al confirmar acción:', error);
+      toast.error('Error al actualizar el inventario');
     } finally {
       setLoading(false);
     }
   };
 
-  // Agregar la función para cancelar la acción
+  // Cancelar confirmación de acciones
   const handleCancelConfirm = () => {
-    toast.info("Operación cancelada", {
-      icon: "❌",
-      autoClose: 2000
-    });
+    // Limpiar estados de confirmación
     setProductToConfirm(null);
     setConfirmAction(null);
+    setShowRemoveConfirm(false);
+    setRemoveQuantity(1);
   };
 
-  // Búsqueda por código de barras
+  // Manejar la entrada de un código de barras
   const handleBarcodeSearch = async (e) => {
-    const barcode = e.target.value;
-    console.log("Entrada de código:", barcode, "Tecla:", e.key || "cambio");
-    setBarcodeInput(barcode);
+    e.preventDefault();
     
-    // Mostrar un toast inmediato como feedback al usuario
-    if (e.key === 'Enter' && barcode.trim()) {
-      // Toast inmediato para confirmar que se está procesando
-      toast.info(
-        <div>
-          <strong>Buscando código...</strong>
-          <div className="toast-details">
-            Procesando código de barras: {barcode}
-          </div>
-        </div>,
-        {
-          icon: "🔎",
-          autoClose: 2000,
-          position: "top-center"
-        }
-      );
-      
-      try {
-        console.log("Iniciando búsqueda de producto con código:", barcode);
-        setLoading(true);
-        setError(null);
-        const product = await getProductByBarcode(barcode);
-        console.log("Resultado de búsqueda:", product ? "Producto encontrado" : "No encontrado");
-        
-        if (product) {
-          // Si encontramos el producto, mostramos solo ese
-          setProducts([product]);
-          
-          console.log("Mostrando toast de éxito para:", product.name);
-          // Usar setTimeout para asegurar que el toast aparezca
-          setTimeout(() => {
-            toast.success(
-              <div>
-                <strong>Producto encontrado</strong>
-                <div className="toast-details">
-                  {product.name} (Código: {barcode})
-                </div>
-              </div>,
-              {
-                icon: "✅",
-                position: "top-center",
-                autoClose: 3000
-              }
-            );
-          }, 300);
-        } else {
-          console.log("Mostrando toast de producto no encontrado");
-          // Usar setTimeout para asegurar que el toast aparezca
-          setTimeout(() => {
-            toast.info(
-              <div>
-                <strong>Código no registrado</strong>
-                <div className="toast-details">
-                  No se encontró ningún producto con el código {barcode}.<br/>
-                  Puedes agregar un nuevo producto usando el botón "Agregar Producto".
-                </div>
-              </div>,
-              {
-                icon: "🔍",
-                autoClose: 5000
-              }
-            );
-          }, 300);
-          
-          // Cargar todos los productos nuevamente (o mantener la búsqueda actual)
-          if (searchTerm) {
-            await handleSearch();
-          } else {
-            await loadData();
-          }
-        }
-      } catch (error) {
-        console.error('Error buscando por código de barras:', error);
-        setError('Error al buscar el código de barras. Por favor, intenta nuevamente.');
-        
-        setTimeout(() => {
-          toast.error(
-            <div>
-              <strong>Error al buscar</strong>
-              <div className="toast-details">
-                No se pudo procesar el código {barcode}
-              </div>
-            </div>,
-            {
-              autoClose: 4000
-            }
-          );
-        }, 300);
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-  
-  // Guardar producto (crear o actualizar)
-  const handleSaveProduct = async (productData) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      if (productData.id) {
-        // Actualizar producto existente
-        await updateProduct(productData.id, productData);
-        // Primero cerramos el formulario y luego mostramos el toast
-        setShowProductForm(false);
-        setEditingProduct(null);
-        setBarcodeInput('');
-        
-        // Recargar datos
-        await loadData();
-        
-        // Mostrar toast después de que todo está listo
-        toast.success(`¡Producto "${productData.name}" actualizado!`, {
-          icon: "✏️",
-          autoClose: 4000,
-          position: "top-center"
-        });
-      } else {
-        // Crear nuevo producto
-        await createProduct(productData);
-        
-        // Primero cerramos el formulario y luego mostramos el toast
-        setShowProductForm(false);
-        setEditingProduct(null);
-        setBarcodeInput('');
-        
-        // Recargar datos
-        await loadData();
-        
-        // Mostrar toast después de que todo está listo
-        toast.success(`¡Producto "${productData.name}" creado exitosamente!`, {
-          icon: "✨",
-          autoClose: 4000,
-          position: "top-center"
-        });
-      }
-    } catch (error) {
-      console.error('Error guardando producto:', error);
-      setError('Error al guardar el producto. Por favor, verifica los datos e intenta nuevamente.');
-      toast.error('Error al guardar el producto', {
-        autoClose: false,
-        position: "top-center"
+    if (!barcodeInput.trim()) {
+      toast.warning('Por favor ingresa un código de barras', {
+        icon: "⚠️"
       });
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Eliminar producto
-  const handleDeleteProduct = async (id) => {
-    // Obtener el producto antes de mostrar la confirmación
-    const productToDelete = products.find(p => p.id === id);
-    
-    if (!productToDelete) {
-      toast.error('Error: Producto no encontrado');
       return;
     }
     
-    if (window.confirm(`¿Estás seguro de eliminar "${productToDelete.name}"?`)) {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Guardar una copia del producto antes de eliminarlo
-        const deletedProductName = productToDelete.name;
-        
-        await deleteProduct(id);
-        
-        // Recargar primero
-        await loadData();
-        
-        // Mostrar toast una vez que se completó la recarga
-        setTimeout(() => {
-          toast.success(`Producto "${deletedProductName}" eliminado`, {
-            icon: "🗑️",
-            position: "top-center"
-          });
-        }, 300);
-      } catch (error) {
-        console.error('Error eliminando producto:', error);
-        setError('Error al eliminar el producto. Por favor, intenta nuevamente.');
-        toast.error('Error al eliminar el producto', {
-          autoClose: false,
-          position: "top-center"
+    try {
+      setLoading(true);
+      
+      // Primero buscar en la base de datos local
+      const existingProduct = await getProductByBarcode(barcodeInput);
+      
+      if (existingProduct) {
+        // Si el producto ya existe, mostrar sus detalles
+        setViewingProduct(existingProduct);
+        setShowProductDetails(true);
+        toast.info(`Producto encontrado: "${existingProduct.name}"`, {
+          autoClose: 2000
         });
-      } finally {
-        setLoading(false);
+      } else {
+        // Si no existe, crear un nuevo producto con ese código
+        setEditingProduct({
+          barcode: barcodeInput,
+          name: '',
+          description: '',
+          price: '',
+          stock: '1'
+        });
+        setShowProductForm(true);
+        
+        // Verificar conexión a internet y buscar en línea
+        const hasInternet = await checkInternetConnection();
+        
+        if (hasInternet) {
+          toast.info('Buscando información en línea...', {
+            icon: "🔍"
+          });
+          
+          // Este método se mantiene igual que en la versión offline
+          // ya que solo busca información en internet
+          const onlineProduct = await searchProductByBarcode(barcodeInput);
+          
+          if (onlineProduct && onlineProduct.name && onlineProduct.name !== `Producto ${barcodeInput}`) {
+            toast.success('¡Producto encontrado en línea!', {
+              autoClose: 2000
+            });
+            
+            // Actualizar el formulario con la información encontrada
+            // Mantener el código de barras original
+            setEditingProduct(prev => ({
+              ...prev,
+              name: onlineProduct.name || '',
+              description: onlineProduct.description || '',
+              // Solo actualizar otros campos si tienen valores
+              price: onlineProduct.price && onlineProduct.price !== 'Precio no encontrado' 
+                ? onlineProduct.price.toString() 
+                : prev.price,
+              // Mantener el stock en 1 para nuevo producto
+            }));
+          } else {
+            toast.info('No se encontró información en línea. Por favor, ingresa los datos manualmente.', {
+              autoClose: 3000
+            });
+          }
+        } else {
+          toast.info('Sin conexión a internet. Ingresa los datos manualmente.', {
+            autoClose: 3000
+          });
+        }
       }
+    } catch (error) {
+      console.error('Error al buscar producto:', error);
+      toast.error('Error al buscar el producto');
+    } finally {
+      setLoading(false);
     }
   };
-  
-  // Abrir formulario para editar
+
+  // Manejar guardado de productos (creación y actualización)
+  const handleSaveProduct = async (productData) => {
+    try {
+      setLoading(true);
+      
+      let savedProduct;
+      
+      if (productData.id) {
+        // Actualizar producto existente
+        console.log('Actualizando producto:', productData);
+        savedProduct = await updateProduct(productData.id, productData);
+        
+        if (savedProduct) {
+          toast.success(`Producto "${productData.name}" actualizado correctamente`);
+        }
+      } else {
+        // Crear nuevo producto
+        console.log('Creando nuevo producto:', productData);
+        savedProduct = await createProduct(productData);
+        
+        if (savedProduct) {
+          toast.success(`Nuevo producto "${productData.name}" creado correctamente`);
+        }
+      }
+      
+      if (savedProduct) {
+        // Cerrar formulario
+        setShowProductForm(false);
+        setEditingProduct(null);
+        
+        // Recargar datos
+        await loadData();
+      } else {
+        toast.error('Error al guardar el producto. Inténtalo nuevamente.');
+      }
+    } catch (error) {
+      console.error('Error al guardar producto:', error);
+      toast.error('Error al guardar el producto: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Manejar eliminación de productos
+  const handleDeleteProduct = async (id) => {
+    // Confirmar eliminación
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este producto?')) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Obtener el producto antes de eliminarlo para mostrar mensaje
+      const productToDelete = products.find(p => p.id === id);
+      
+      // Eliminar producto de la API
+      const result = await deleteProduct(id);
+      
+      if (result) {
+        // Si se eliminó correctamente, actualizar UI
+        if (productToDelete) {
+          toast.success(`Producto "${productToDelete.name}" eliminado correctamente`);
+        } else {
+          toast.success('Producto eliminado correctamente');
+        }
+        
+        // Cerrar detalles si estaba abierto
+        if (showProductDetails && viewingProduct && viewingProduct.id === id) {
+          setShowProductDetails(false);
+          setViewingProduct(null);
+        }
+        
+        // Recargar datos
+        await loadData();
+      } else {
+        toast.error('Error al eliminar el producto');
+      }
+    } catch (error) {
+      console.error('Error al eliminar producto:', error);
+      toast.error('Error al eliminar el producto: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Manejar edición de productos
   const handleEditProduct = (product) => {
     setEditingProduct(product);
     setShowProductForm(true);
   };
-  
-  // Ver detalles del producto
+
+  // Manejar vista de detalles de producto
   const handleViewProduct = (product) => {
     setViewingProduct(product);
     setShowProductDetails(true);
   };
-  
+
   // Cerrar vista de detalles
   const handleCloseDetails = () => {
     setShowProductDetails(false);
     setViewingProduct(null);
   };
-  
-  // Cancelar edición/creación
+
+  // Cancelar formulario de producto
   const handleCancelForm = () => {
     setShowProductForm(false);
     setEditingProduct(null);
-    setBarcodeInput('');
   };
-  
-  // Manejar acciones de categoría
+
+  // Manejar guardado de categorías
   const handleAddCategory = async (categoryData) => {
     try {
       setLoading(true);
-      setError(null);
-      await createCategory(categoryData);
-      await loadData();
-      toast.success(`Categoría "${categoryData.name}" creada`, {
-        icon: "📁"
-      });
+      
+      const newCategory = await createCategory(categoryData);
+      
+      if (newCategory) {
+        toast.success(`Categoría "${categoryData.name}" creada correctamente`);
+        
+        // Recargar categorías
+        const updatedCategories = await getAllCategories();
+        setCategories(updatedCategories);
+      } else {
+        toast.error('Error al crear la categoría');
+      }
     } catch (error) {
-      console.error('Error al agregar categoría:', error);
-      setError('Error al agregar la categoría. Por favor, intenta nuevamente.');
-      toast.error(`Error al crear categoría "${categoryData.name}"`, {
-        autoClose: false
-      });
+      console.error('Error al crear categoría:', error);
+      toast.error('Error al crear la categoría: ' + error.message);
+    } finally {
       setLoading(false);
     }
   };
 
+  // Manejar edición de categoría
   const handleEditCategory = async (categoryData) => {
     try {
       setLoading(true);
-      setError(null);
-      await updateCategory(categoryData.id, categoryData);
-      await loadData();
-      toast.success(`Categoría "${categoryData.name}" actualizada`, {
-        icon: "📋"
-      });
+      
+      const updatedCategory = await updateCategory(categoryData.id, categoryData);
+      
+      if (updatedCategory) {
+        toast.success(`Categoría "${categoryData.name}" actualizada correctamente`);
+        
+        // Recargar categorías y productos (pueden haber cambiado las relaciones)
+        const updatedCategories = await getAllCategories();
+        setCategories(updatedCategories);
+        await loadData();
+      } else {
+        toast.error('Error al actualizar la categoría');
+      }
     } catch (error) {
-      console.error('Error al editar categoría:', error);
-      setError('Error al editar la categoría. Por favor, intenta nuevamente.');
-      toast.error('Error al actualizar la categoría', {
-        autoClose: false
-      });
+      console.error('Error al actualizar categoría:', error);
+      toast.error('Error al actualizar la categoría: ' + error.message);
+    } finally {
       setLoading(false);
     }
   };
 
+  // Manejar eliminación de categoría
   const handleDeleteCategory = async (id) => {
     try {
       setLoading(true);
-      setError(null);
-      // Obtener el nombre de la categoría antes de eliminarla
+      
+      // Obtener la categoría para el mensaje
       const categoryToDelete = categories.find(c => c.id === id);
-      await deleteCategory(id);
-      await loadData();
-      toast.success(`Categoría "${categoryToDelete?.name || ''}" eliminada`, {
-        icon: "🗑️" 
-      });
+      
+      const result = await deleteCategory(id);
+      
+      if (result) {
+        // Si se eliminó correctamente
+        if (categoryToDelete) {
+          toast.success(`Categoría "${categoryToDelete.name}" eliminada correctamente`);
+        } else {
+          toast.success('Categoría eliminada correctamente');
+        }
+        
+        // Recargar categorías y productos
+        const updatedCategories = await getAllCategories();
+        setCategories(updatedCategories);
+        await loadData();
+      } else {
+        toast.error('Error al eliminar la categoría');
+      }
     } catch (error) {
       console.error('Error al eliminar categoría:', error);
-      setError('Error al eliminar la categoría. Por favor, intenta nuevamente.');
-      toast.error('Error al eliminar la categoría', {
-        autoClose: false
-      });
+      toast.error('Error al eliminar la categoría: ' + error.message);
+    } finally {
       setLoading(false);
     }
   };
-  
+
   // Mostrar/ocultar estadísticas
   const toggleStats = () => {
     setShowStats(!showStats);
   };
-  
-  // Ahora, agregamos el botón de acción para quitar 1 en la tabla
-  // Buscar la parte donde están las acciones de la tabla (botones de Editar, Eliminar, Ver)
+
+  // Manejar reducción rápida de stock desde la tabla
   const handleQuickRemoveInTable = (product) => {
-    if (product.stock <= 0) {
-      toast.warning(`No hay unidades disponibles de ${product.name} para quitar`, {
-        icon: "⚠️",
-        autoClose: 3000
-      });
-      return;
-    }
-    
-    // Establecer estados y mostrar toast
     setProductToConfirm(product);
-    setRemoveQuantity(1);
+    setConfirmAction('quickRemove');
     setShowRemoveConfirm(true);
-    
-    toast.info(`Selecciona cuántas unidades quitar de ${product.name}`, {
-      icon: "🔢",
-      autoClose: 2000
-    });
+    setRemoveQuantity(1);
   };
-  
+
+  // Manejar reducción de stock con cantidad específica
   const handleReduceProductStock = async () => {
-    try {
-      if (!productToConfirm) return;
-      
-      // Toast inicial antes de comenzar la operación
-      toast.info(
-        <div>
-          <strong>Procesando cambio de inventario...</strong>
-          <div className="toast-details">
-            Quitando {removeQuantity} {removeQuantity === 1 ? 'unidad' : 'unidades'} de {productToConfirm.name}
-          </div>
-        </div>,
-        {
-          icon: "⏳",
-          autoClose: 2000
-        }
-      );
-      
-      setLoading(true);
-      const oldStock = productToConfirm.stock;
-      const newStock = Math.max(0, oldStock - removeQuantity);
-      
-      // Actualizar el producto
-      await updateProduct(productToConfirm.id, { stock: newStock });
-      
-      // Recargar datos
-      await loadData();
-      
-      // Toast de CONFIRMACIÓN después de actualizar
-      setTimeout(() => {
-        toast.success(
-          <div>
-            <strong>¡Stock reducido con éxito!</strong>
-            <div className="toast-details">
-              {removeQuantity === 1 
-                ? `Se quitó 1 unidad de ${productToConfirm.name}`
-                : `Se quitaron ${removeQuantity} unidades de ${productToConfirm.name}`
-              }
-              <br />
-              Stock anterior: {oldStock} → Nuevo stock: {newStock}
-            </div>
-          </div>,
-          {
-            icon: "✅",
-            autoClose: 5000
-          }
-        );
-        
-        // Toasts adicionales según el nivel de stock
-        if (newStock <= 5 && newStock > 0) {
-          setTimeout(() => {
-            toast.warning(
-              <div>
-                <strong>¡Stock bajo!</strong>
-                <div className="toast-details">
-                  Solo quedan {newStock} unidades de {productToConfirm.name}
-                </div>
-              </div>,
-              {
-                icon: "⚠️",
-                autoClose: 5000
-              }
-            );
-          }, 300);
-        } else if (newStock === 0) {
-          setTimeout(() => {
-            toast.error(
-              <div>
-                <strong>¡Producto agotado!</strong>
-                <div className="toast-details">
-                  {productToConfirm.name} se ha quedado sin stock
-                </div>
-              </div>,
-              {
-                icon: "🚨",
-                autoClose: 5000
-              }
-            );
-          }, 300);
-        }
-      }, 500);
-    } catch (error) {
-      console.error('Error al reducir stock:', error);
-      toast.error('Error al actualizar el inventario', {
-        autoClose: 4000
-      });
-    } finally {
-      setLoading(false);
-      setProductToConfirm(null);
-      setShowRemoveConfirm(false);
-      setRemoveQuantity(1);
-    }
+    handleConfirmAction(); // Usa la misma lógica de confirmación
   };
-  
-  // Una prueba rápida para asegurarnos que los toasts funcionan
-  useEffect(() => {
-    // Usamos una ref en memoria en lugar de sessionStorage para desarrollo
-    if (!hasShownWelcome) {
-      // Marcamos que ya mostramos antes de ejecutar el toast
-      setHasShownWelcome(true);
-      
-      setTimeout(() => {
-        toast.info(
-          <div>
-            <strong>Bienvenido al Sistema de Inventario</strong>
-            <div className="toast-details">
-              Usa el escáner de códigos de barras para buscar o actualizar productos
-            </div>
-          </div>,
-          {
-            icon: "👋",
-            autoClose: 5000,
-            position: "top-center",
-            // Usar un ID único para este toast para evitar duplicados
-            toastId: "welcome-toast"
-          }
-        );
-      }, 1000);
-    }
-  }, [hasShownWelcome]); // Dependemos del estado para evitar loops
-  
-  // Manejador de sincronización completa
-  const handleSyncComplete = async (result) => {
-    if (result && result.success) {
-      try {
-        setLoading(true);
-        
-        // Actualizar productos locales con los datos del servidor
-        const updateResult = await updateProductsAfterSync(result);
-        
-        // Actualizar categorías locales con los datos del servidor
-        const categoryUpdateResult = await updateCategoriesAfterSync(result);
-        
-        // Eliminar físicamente los productos marcados como eliminados
-        const purgedProductsCount = await purgeDeletedProducts();
-        
-        // Eliminar físicamente las categorías marcadas como eliminadas
-        const purgedCategoriesCount = await purgeDeletedCategories();
-        
-        // Mensaje básico de sincronización
-        let syncMessage = `Sincronización completada:\n` +
-          `Productos: ${updateResult.updated} actualizados, ${updateResult.added} agregados, ${updateResult.skipped || 0} omitidos, ${purgedProductsCount} purgados\n` +
-          `Categorías: ${categoryUpdateResult?.updated || 0} actualizadas, ${categoryUpdateResult?.added || 0} agregadas, ${categoryUpdateResult?.skipped || 0} omitidas, ${purgedCategoriesCount || 0} purgadas`;
-        
-        // Si hay productos omitidos, agregar detalle
-        if (updateResult.skipped > 0 && updateResult.skippedProducts?.length > 0) {
-          // Agregar hasta 4 productos omitidos para no hacer el mensaje demasiado largo
-          const maxToShow = Math.min(updateResult.skippedProducts.length, 4);
-          syncMessage += `\n\nDetalle de productos omitidos:`;
-          
-          for (let i = 0; i < maxToShow; i++) {
-            const p = updateResult.skippedProducts[i];
-            syncMessage += `\n- ${p.name || p.barcode}: ${p.reason}`;
-          }
-          
-          // Si hay más productos omitidos, indicarlo
-          if (updateResult.skippedProducts.length > maxToShow) {
-            syncMessage += `\n- Y ${updateResult.skippedProducts.length - maxToShow} más...`;
-          }
-          
-          // Mostrar mensaje en consola para referencia completa
-          console.log("Lista completa de productos omitidos:", updateResult.skippedProducts);
-        }
-        
-        toast.success(syncMessage);
-        
-        // Recargar los datos para reflejar los cambios
-        await loadData();
-      } catch (error) {
-        toast.error(`Error al procesar resultados de sincronización: ${error.message}`);
-      } finally {
-        setLoading(false);
-      }
-    } else if (result && !result.success) {
-      toast.error(`Error en sincronización: ${result.error}`);
-    }
+
+  // Manejar login exitoso
+  const handleLoginSuccess = () => {
+    setAuthenticated(true);
+    loadData();
   };
-  
-  if (loading) return <div className="loading-screen">Cargando inventario...</div>;
-  
+
+  // Manejar logout
+  const handleLogout = () => {
+    logout();
+    setAuthenticated(false);
+    setProducts([]);
+    setCategories([]);
+    toast.info('Has cerrado sesión correctamente');
+  };
+
+  // Si no está autenticado, mostrar pantalla de login
+  if (!authenticated) {
+    return (
+      <div className="app">
+        <ToastContainer position="top-right" autoClose={3000} />
+        <Login onLoginSuccess={handleLoginSuccess} />
+      </div>
+    );
+  }
+
   return (
-    <div className="app-container">
-      <ToastContainer 
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="dark"
-        limit={5}
-        toastClassName="app-toast"
-        bodyClassName="toast-body"
-        closeButton={true}
-        style={{ zIndex: 9999 }}
-      />
+    <div className="app">
+      <ToastContainer position="top-right" autoClose={3000} />
       
       <header className="app-header">
-        <h1>Sistema de Inventario</h1>
-        <div className="header-actions">
-          <div className="quick-add-dropdown" ref={dropdownRef}>
-            <button
-              className='quick-add-button'
-              onClick={handleQuickAddForm}
-              aria-label="Agregar producto por código de barras"
-            >
-              <i className="icon-barcode"></i>
-              Agregar Rápido
-            </button>
-            
-            {showQuickAdd && (
-              <div className="quick-add-dropdown-content">
-                <h3>Agregar +1 al inventario</h3>
-                <input
-                  type="text"
-                  placeholder="Escanear código de barras aquí..."
-                  value={barcodeInput}
-                  onChange={(e) => setBarcodeInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
-                  className="barcode-input"
-                  aria-label="Escanear código de barras"
-                  ref={barcodeInputRef}
-                  autoFocus
-                />
-                <div className="quick-add-buttons">
-                  {confirmAction === 'quickAdd' && productToConfirm ? (
-                    <div className="confirm-action">
-                      <p>¿Agregar 1 unidad de <strong>{productToConfirm.name}</strong>?</p>
-                      <div className="confirm-buttons">
-                        <button
-                          className="primary-button"
-                          onClick={handleConfirmAction}
-                        >
-                          Confirmar
-                        </button>
-                        <button
-                          className="secondary-button"
-                          onClick={handleCancelConfirm}
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="quick-add-button-group">
-                      <button
-                        className="primary-button action-button-equal"
-                        onClick={handleQuickAdd}
-                        aria-label="Agregar +1 al inventario"
-                      >
-                        <i className="icon-add"></i>
-                        Agregar +1
-                      </button>
-                      <button
-                        className="secondary-button action-button-equal"
-                        onClick={() => setShowQuickAdd(false)}
-                        aria-label="Cancelar"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-          <button 
-            className="primary-button"
-            onClick={() => setShowProductForm(true)}
-            aria-label="Agregar nuevo producto"
-          >
-            <i className="icon-add"></i> Agregar Producto
-          </button>
-          <button 
-            className="secondary-button"
-            onClick={() => setShowCategoryManager(!showCategoryManager)}
-            aria-label="Gestionar categorías"
-          >
-            <i className="icon-category"></i> Categorías
-          </button>
-          <button 
-            className={`stats-button ${showStats ? 'active' : ''}`}
-            onClick={toggleStats}
-            aria-label="Ver estadísticas"
-          >
-            <i className="icon-stats"></i> Estadísticas
-          </button>
-          <button 
-            className="sync-button"
-            onClick={() => setShowSyncSettings(!showSyncSettings)}
-          >
-            <i className="icon-sync"></i> Sincronización
+        <div className="header-left">
+          <h1>Sistema de Inventario</h1>
+          <span className="user-info">
+            Usuario: {getCurrentUser()}
+          </span>
+        </div>
+        <div className="header-right">
+          <button className="logout-button" onClick={handleLogout}>
+            Cerrar Sesión
           </button>
         </div>
       </header>
-
-      {error && (
-        <div className="error-message">
-          <p>{error}</p>
-          <button onClick={() => setError(null)} className="close-error">×</button>
-        </div>
-      )}
-
-      {showCategoryManager && (
-        <CategoryManagement 
-          categories={categories}
-          onAddCategory={handleAddCategory}
-          onEditCategory={handleEditCategory}
-          onDeleteCategory={handleDeleteCategory}
-        />
-      )}
-
-      {showStats && products.length > 0 && (
-        <InventoryStats products={products} categories={categories} />
-      )}
-
-      {/* Configuración de sincronización */}
-      {showSyncSettings && (
-        <SyncSettings
-          onSyncComplete={handleSyncComplete}
-        />
-      )}
-
-      {!showProductForm && !showProductDetails && (
-        <>
+      
+      <div className="app-content">
+        <div className="toolbar">
           <div className="search-container">
-            <div className="search-bar">
-              <input 
-                type="text"
-                placeholder="Buscar productos por nombre..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="search-input"
-                aria-label="Buscar productos"
-              />
-              <button 
-                className="search-button"
-                onClick={handleSearch}
-                aria-label="Iniciar búsqueda"
-              >
-                <i className="icon-search"></i>
-              </button>
-            </div>
-
-            <div className="barcode-scanner">
+            <input
+              type="text"
+              placeholder="Buscar por nombre o código"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            />
+            <button onClick={handleSearch} className="search-button">
+              Buscar
+            </button>
+          </div>
+          
+          <div className="barcode-search">
+            <form onSubmit={handleBarcodeSearch}>
               <input
                 type="text"
-                placeholder="Escanear código de barras aquí..."
+                placeholder="Escanear código de barras"
                 value={barcodeInput}
                 onChange={(e) => setBarcodeInput(e.target.value)}
-                onKeyDown={handleBarcodeSearch}
-                className="barcode-input"
-                aria-label="Escanear código de barras"
               />
-              <div className="barcode-icon">
-                <i className="icon-barcode"></i>
+              <button type="submit">Buscar</button>
+            </form>
+          </div>
+          
+          <div className="action-buttons">
+            <button onClick={() => {
+              setEditingProduct(null);
+              setShowProductForm(true);
+            }} className="add-button">
+              Nuevo Producto
+            </button>
+            
+            <button onClick={handleQuickAddForm} className="quick-add-button">
+              Agregar Rápido
+            </button>
+            
+            <button 
+              onClick={() => setShowCategoryManager(true)} 
+              className="category-button"
+            >
+              Categorías
+            </button>
+            
+            <button 
+              onClick={toggleStats} 
+              className="stats-button"
+            >
+              Estadísticas
+            </button>
+          </div>
+        </div>
+        
+        {/* Dropdown para agregar rápido */}
+        {showQuickAdd && (
+          <div className="quick-add-dropdown" ref={dropdownRef}>
+            <div className="quick-add-header">
+              <h3>Agregar Rápido</h3>
+              <button onClick={() => setShowQuickAdd(false)} className="close-button">×</button>
+            </div>
+            <div className="quick-add-content">
+              <input
+                type="text"
+                placeholder="Escanear código de barras"
+                value={barcodeInput}
+                onChange={(e) => setBarcodeInput(e.target.value)}
+                ref={barcodeInputRef}
+                onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
+              />
+              <button onClick={handleQuickAdd}>Agregar +1</button>
+            </div>
+          </div>
+        )}
+        
+        {/* Confirmación para agregar/quitar stock */}
+        {productToConfirm && confirmAction === 'quickAdd' && (
+          <div className="confirmation-dialog">
+            <div className="confirmation-content">
+              <h3>Confirmar Agregar Stock</h3>
+              <p>¿Agregar +1 unidad al producto "{productToConfirm.name}"?</p>
+              <p>Stock actual: {productToConfirm.stock} unidades</p>
+              <div className="confirmation-actions">
+                <button onClick={handleCancelConfirm} className="cancel-button">Cancelar</button>
+                <button onClick={handleConfirmAction} className="confirm-button">Confirmar</button>
               </div>
             </div>
           </div>
-
-          <div className="filter-container">
-            <div className="category-filter">
-              <label htmlFor="category-select">Filtrar por categoría:</label>
-              <select 
-                id="category-select"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="category-select"
-                aria-label="Filtrar por categoría"
-              >
-                <option value="all">Todas las categorías</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+        )}
+        
+        {/* Confirmación para quitar stock con cantidad */}
+        {showRemoveConfirm && (
+          <div className="confirmation-dialog">
+            <div className="confirmation-content">
+              <h3>Reducir Stock</h3>
+              <p>Producto: "{productToConfirm.name}"</p>
+              <p>Stock actual: {productToConfirm.stock} unidades</p>
+              <div className="quantity-selector">
+                <label>Cantidad a reducir:</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={productToConfirm.stock}
+                  value={removeQuantity}
+                  onChange={(e) => setRemoveQuantity(parseInt(e.target.value) || 1)}
+                />
+              </div>
+              <div className="confirmation-actions">
+                <button onClick={handleCancelConfirm} className="cancel-button">Cancelar</button>
+                <button onClick={handleReduceProductStock} className="confirm-button">Confirmar</button>
+              </div>
             </div>
           </div>
-
-          <main className="inventory-content">
-            {products.length === 0 ? (
-              <div className="empty-inventory">
-                <p>No hay productos en el inventario</p>
-                <button 
-                  className="primary-button"
-                  onClick={() => setShowProductForm(true)}
-                  aria-label="Agregar primer producto"
-                >
-                  Agregar tu primer producto
-                </button>
-              </div>
-            ) : (
-              <div className="table-container">
-                <table className="inventory-table" aria-label="Lista de productos">
-                  <thead>
-                    <tr>
-                      <th scope="col">Código</th>
-                      <th scope="col">Nombre</th>
-                      <th scope="col">Categoría</th>
-                      <th scope="col">Precio</th>
-                      <th scope="col">Stock</th>
-                      <th scope="col">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.map((product) => (
-                      <tr key={product.id} className="product-row">
-                        <td>{product.barcode || '---'}</td>
-                        <td className="product-name">{product.name}</td>
-                        <td>{product.Category?.name || 'Sin categoría'}</td>
-                        <td className="product-price">${product.price}</td>
-                        <td className={`product-stock ${product.stock <= 5 ? 'low-stock' : ''}`}>
-                          {product.stock}
-                          {product.stock <= 5 && (
-                            <span className="low-stock-indicator" 
-                              onMouseEnter={() => toast.warning(`¡Stock bajo! Solo quedan ${product.stock} unidades`, {
-                                autoClose: 3000,
-                                icon: "⚠️",
-                                toastId: `low-stock-${product.id}`
-                              })}
-                            >!</span>
-                          )}
-                        </td>
-                        <td className="product-actions">
+        )}
+        
+        {/* Filtrado por categoría */}
+        <div className="category-filter">
+          <label>Filtrar por categoría:</label>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            <option value="all">Todas las categorías</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        {/* Tabla de productos */}
+        <div className="products-container">
+          {loading ? (
+            <div className="loading">
+              <div className="spinner"></div>
+              <p>Cargando...</p>
+            </div>
+          ) : error ? (
+            <div className="error-message">
+              <p>{error}</p>
+              <button onClick={loadData}>Reintentar</button>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="empty-products">
+              <p>No hay productos disponibles</p>
+              <button onClick={() => {
+                setEditingProduct(null);
+                setShowProductForm(true);
+              }}>Agregar Primer Producto</button>
+            </div>
+          ) : (
+            <table className="products-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Nombre</th>
+                  <th>Precio</th>
+                  <th>Stock</th>
+                  <th>Categoría</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map((product) => {
+                  // Encontrar el nombre de la categoría
+                  const categoryName = 
+                    categories.find(c => c.id === product.category)?.name || 
+                    'Sin categoría';
+                    
+                  return (
+                    <tr key={product.id} className={product.stock <= 0 ? 'out-of-stock' : ''}>
+                      <td>{product.barcode}</td>
+                      <td>{product.name}</td>
+                      <td>₡{parseFloat(product.price).toLocaleString()}</td>
+                      <td className={`stock-cell ${product.stock <= 0 ? 'zero-stock' : ''}`}>
+                        {product.stock}
+                        <div className="stock-actions">
                           <button 
-                            className="action-button edit-button" 
-                            onClick={() => handleEditProduct(product)}
-                            title="Editar producto"
-                            aria-label={`Editar ${product.name}`}
+                            onClick={() => {
+                              setProductToConfirm(product);
+                              setConfirmAction('quickAdd');
+                            }}
+                            className="add-stock-button"
+                            title="Agregar 1 unidad"
                           >
-                            <i className="icon-edit"></i>
+                            +
                           </button>
                           <button 
-                            className="action-button delete-button" 
-                            onClick={() => handleDeleteProduct(product.id)}
-                            title="Eliminar producto"
-                            aria-label={`Eliminar ${product.name}`}
-                          >
-                            <i className="icon-delete"></i>
-                          </button>
-                          <button 
-                            className="action-button view-button" 
-                            onClick={() => handleViewProduct(product)}
-                            title="Ver detalles del producto"
-                            aria-label={`Ver detalles de ${product.name}`}
-                          >
-                            <i className="icon-view"></i>
-                          </button>
-                          <button 
-                            className="action-button decrease-button" 
                             onClick={() => handleQuickRemoveInTable(product)}
-                            title="Quitar 1 unidad"
-                            aria-label={`Quitar 1 unidad de ${product.name}`}
+                            className="remove-stock-button"
+                            title="Reducir stock"
                             disabled={product.stock <= 0}
                           >
-                            <i className="icon-remove"></i>
+                            -
                           </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </main>
-        </>
-      )}
-
+                        </div>
+                      </td>
+                      <td>{categoryName}</td>
+                      <td className="actions-cell">
+                        <button 
+                          onClick={() => handleViewProduct(product)} 
+                          className="view-button"
+                          title="Ver detalles"
+                        >
+                          Ver
+                        </button>
+                        <button 
+                          onClick={() => handleEditProduct(product)} 
+                          className="edit-button"
+                          title="Editar producto"
+                        >
+                          Editar
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteProduct(product.id)} 
+                          className="delete-button"
+                          title="Eliminar producto"
+                        >
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+      
+      {/* Formulario de Producto */}
       {showProductForm && (
-        <div className="product-form-overlay">
-          <ProductForm 
-            product={editingProduct}
-            categories={categories}
-            onSave={handleSaveProduct}
-            onCancel={handleCancelForm}
-          />
+        <div className="modal">
+          <div className="modal-content product-form-modal">
+            <ProductForm 
+              product={editingProduct}
+              categories={categories}
+              onSave={handleSaveProduct}
+              onCancel={handleCancelForm}
+            />
+          </div>
         </div>
       )}
-
+      
+      {/* Detalles de Producto */}
       {showProductDetails && viewingProduct && (
-        <ProductDetails 
-          product={viewingProduct}
-          onClose={handleCloseDetails}
-        />
+        <div className="modal">
+          <div className="modal-content product-details-modal">
+            <ProductDetails 
+              product={viewingProduct}
+              categories={categories}
+              onClose={handleCloseDetails}
+              onEdit={() => {
+                handleCloseDetails();
+                handleEditProduct(viewingProduct);
+              }}
+              onDelete={() => {
+                const shouldDelete = window.confirm(
+                  `¿Estás seguro de que deseas eliminar el producto "${viewingProduct.name}"?`
+                );
+                
+                if (shouldDelete) {
+                  handleCloseDetails();
+                  handleDeleteProduct(viewingProduct.id);
+                }
+              }}
+            />
+          </div>
+        </div>
       )}
-
-      <footer className="app-footer">
-        <p>Administrador de inventario v1.0 | Desarrollado en México</p>
-      </footer>
-
-      {/* Modal para quitar unidades del stock */}
-      {showRemoveConfirm && productToConfirm && (
-        <div className="product-form-overlay">
-          <div className="remove-stock-container">
-            <h2>Quitar unidades del inventario</h2>
-            <p>
-              Producto: <strong>{productToConfirm.name}</strong>
-              <br />
-              Stock actual: <strong>{productToConfirm.stock}</strong>
-            </p>
-            
-            <div className="remove-stock-form">
-              <label htmlFor="removeQuantity">Cantidad a quitar:</label>
-              <input
-                id="removeQuantity"
-                type="number"
-                min="1"
-                max={productToConfirm.stock}
-                value={removeQuantity}
-                onChange={(e) => setRemoveQuantity(
-                  Math.min(
-                    Math.max(1, parseInt(e.target.value) || 1),
-                    productToConfirm.stock
-                  )
-                )}
-                className="quantity-input"
-              />
-              
-              <div className="quantity-buttons">
-                <button 
-                  className="quantity-btn decrease"
-                  onClick={() => setRemoveQuantity(prev => Math.max(1, prev - 1))}
-                  disabled={removeQuantity <= 1}
-                >
-                  -
-                </button>
-                <span className="quantity-display">{removeQuantity}</span>
-                <button 
-                  className="quantity-btn increase"
-                  onClick={() => setRemoveQuantity(prev => Math.min(productToConfirm.stock, prev + 1))}
-                  disabled={removeQuantity >= productToConfirm.stock}
-                >
-                  +
-                </button>
-              </div>
-              
-              <div className="confirm-buttons">
-                <button
-                  className="primary-button"
-                  onClick={handleReduceProductStock}
-                >
-                  Confirmar
-                </button>
-                <button
-                  className="secondary-button"
-                  onClick={() => {
-                    setShowRemoveConfirm(false);
-                    setProductToConfirm(null);
-                    setRemoveQuantity(1);
-                    toast.info("Operación cancelada", {
-                      icon: "❌",
-                      autoClose: 2000
-                    });
-                  }}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
+      
+      {/* Gestión de Categorías */}
+      {showCategoryManager && (
+        <div className="modal">
+          <div className="modal-content category-modal">
+            <button 
+              className="close-modal-button"
+              onClick={() => setShowCategoryManager(false)}
+            >
+              ✕
+            </button>
+            <CategoryManagement 
+              categories={categories}
+              onAddCategory={handleAddCategory}
+              onEditCategory={handleEditCategory}
+              onDeleteCategory={handleDeleteCategory}
+            />
+          </div>
+        </div>
+      )}
+      
+      {/* Estadísticas */}
+      {showStats && (
+        <div className="modal">
+          <div className="modal-content stats-modal">
+            <button 
+              className="close-modal-button"
+              onClick={() => setShowStats(false)}
+            >
+              ✕
+            </button>
+            <InventoryStats 
+              products={products}
+              categories={categories}
+            />
           </div>
         </div>
       )}
