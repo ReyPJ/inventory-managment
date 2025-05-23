@@ -259,7 +259,7 @@ export const createProduct = async (productData) => {
         description: productData.description || "",
         price: productData.price.toString(),
         stock: productData.stock,
-        category: productData.CategoryId, // Nota: API usa 'category' en lugar de 'CategoryId'
+        category: productData.category,
         sku: productData.sku || "",
         image_url: productData.image_url || null,
         is_active: true,
@@ -288,7 +288,7 @@ export const updateProduct = async (id, productData) => {
         description: productData.description || "",
         price: productData.price.toString(),
         stock: productData.stock,
-        category: productData.CategoryId, // Nota: API usa 'category' en lugar de 'CategoryId'
+        category: productData.category,
         sku: productData.sku || "",
         image_url: productData.image_url || null,
         is_active: true,

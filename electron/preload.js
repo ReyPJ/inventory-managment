@@ -14,21 +14,18 @@ console.log("🔍 [DIAGNÓSTICO] Preload script iniciado");
 try {
   console.log("🔍 [DIAGNÓSTICO] Entorno:", process.env.NODE_ENV);
   console.log("🔍 [DIAGNÓSTICO] Plataforma:", process.platform);
-  console.log("🔍 [DIAGNÓSTICO] Versión de Electron:", process.versions.electron);
+  console.log(
+    "🔍 [DIAGNÓSTICO] Versión de Electron:",
+    process.versions.electron
+  );
   console.log("🔍 [DIAGNÓSTICO] Versión de Node:", process.versions.node);
   console.log("🔍 [DIAGNÓSTICO] Directorio de ejecución:", process.cwd());
-  
-  if (process.env.APPDATA) {
-    console.log("🔍 [DIAGNÓSTICO] Directorio APPDATA:", process.env.APPDATA);
-    console.log("🔍 [DIAGNÓSTICO] Ruta probable de la base de datos:", 
-      require('path').join(process.env.APPDATA, 'sistema-inventario', 'inventory-database.sqlite'));
-  }
 
   log("Inicializando preload.js");
 
   // Intentar exponer la API a través de contextBridge
   contextBridge.exposeInMainWorld("electronAPI", {
-    // Productos
+    // Operaciones de producto (se conectarán a FastAPI cuando haya internet)
     getAllProducts: () => {
       log("Llamando a getAllProducts");
       return ipcRenderer.invoke("get-all-products");
@@ -61,16 +58,8 @@ try {
       log("Llamando a searchProducts:", query);
       return ipcRenderer.invoke("search-products", query);
     },
-    updateProductsAfterSync: (syncResults) => {
-      log("Llamando a updateProductsAfterSync");
-      return ipcRenderer.invoke("update-products-after-sync", syncResults);
-    },
-    purgeDeletedProducts: () => {
-      log("Llamando a purgeDeletedProducts");
-      return ipcRenderer.invoke("purge-deleted-products");
-    },
 
-    // Categorías
+    // Operaciones de categoría (se conectarán a FastAPI cuando haya internet)
     getAllCategories: () => {
       log("Llamando a getAllCategories");
       return ipcRenderer.invoke("get-all-categories");
@@ -91,14 +80,11 @@ try {
       log("Llamando a deleteCategory:", id);
       return ipcRenderer.invoke("delete-category", id);
     },
-    // Nuevos métodos para sincronización de categorías
-    updateCategoriesAfterSync: (syncResults) => {
-      log("Llamando a updateCategoriesAfterSync");
-      return ipcRenderer.invoke("update-categories-after-sync", syncResults);
-    },
-    purgeDeletedCategories: () => {
-      log("Llamando a purgeDeletedCategories");
-      return ipcRenderer.invoke("purge-deleted-categories");
+
+    // Comprobar estado de la conexión
+    checkConnectivity: () => {
+      log("Llamando a checkConnectivity");
+      return ipcRenderer.invoke("check-connectivity");
     },
   });
 

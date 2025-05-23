@@ -320,6 +320,29 @@ function App() {
         
         // Recargar datos
         await loadData();
+      } else if (confirmAction === 'delete') {
+        // Eliminar producto
+        const result = await deleteProduct(productToConfirm.id);
+        
+        if (result) {
+          // Si se eliminó correctamente, actualizar UI
+          toast.success(`Producto "${productToConfirm.name}" eliminado correctamente`);
+          
+          // Cerrar detalles si estaba abierto
+          if (showProductDetails && viewingProduct && viewingProduct.id === productToConfirm.id) {
+            setShowProductDetails(false);
+            setViewingProduct(null);
+          }
+          
+          // Recargar datos
+          await loadData();
+        } else {
+          toast.error('Error al eliminar el producto');
+        }
+        
+        // Limpiar y resetear
+        setProductToConfirm(null);
+        setConfirmAction(null);
       }
     } catch (error) {
       console.error('Error al confirmar acción:', error);
@@ -466,45 +489,10 @@ function App() {
 
   // Manejar eliminación de productos
   const handleDeleteProduct = async (id) => {
-    // Confirmar eliminación
-    if (!window.confirm('¿Estás seguro de que deseas eliminar este producto?')) {
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      
-      // Obtener el producto antes de eliminarlo para mostrar mensaje
-      const productToDelete = products.find(p => p.id === id);
-      
-      // Eliminar producto de la API
-      const result = await deleteProduct(id);
-      
-      if (result) {
-        // Si se eliminó correctamente, actualizar UI
-        if (productToDelete) {
-          toast.success(`Producto "${productToDelete.name}" eliminado correctamente`);
-        } else {
-          toast.success('Producto eliminado correctamente');
-        }
-        
-        // Cerrar detalles si estaba abierto
-        if (showProductDetails && viewingProduct && viewingProduct.id === id) {
-          setShowProductDetails(false);
-          setViewingProduct(null);
-        }
-        
-        // Recargar datos
-        await loadData();
-      } else {
-        toast.error('Error al eliminar el producto');
-      }
-    } catch (error) {
-      console.error('Error al eliminar producto:', error);
-      toast.error('Error al eliminar el producto: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
+    // Guardar el producto a eliminar y mostrar un diálogo de confirmación personalizado
+    const productToDelete = products.find(p => p.id === id);
+    setProductToConfirm(productToDelete);
+    setConfirmAction('delete');
   };
 
   // Manejar edición de productos
@@ -750,7 +738,7 @@ function App() {
           </div>
         )}
         
-        {/* Confirmación para agregar/quitar stock */}
+        {/* Diálogo de confirmación para agregar stock */}
         {productToConfirm && confirmAction === 'quickAdd' && (
           <div className="confirmation-dialog">
             <div className="confirmation-content">
@@ -760,6 +748,20 @@ function App() {
               <div className="confirmation-actions">
                 <button onClick={handleCancelConfirm} className="cancel-button">Cancelar</button>
                 <button onClick={handleConfirmAction} className="confirm-button">Confirmar</button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Diálogo de confirmación para eliminar producto */}
+        {productToConfirm && confirmAction === 'delete' && (
+          <div className="confirmation-dialog">
+            <div className="confirmation-content">
+              <h3>Confirmar Eliminación</h3>
+              <p>¿Estás seguro de que deseas eliminar el producto "{productToConfirm.name}"?</p>
+              <div className="confirmation-actions">
+                <button onClick={handleCancelConfirm} className="cancel-button">Cancelar</button>
+                <button onClick={handleConfirmAction} className="confirm-button">Eliminar</button>
               </div>
             </div>
           </div>
@@ -849,7 +851,7 @@ function App() {
                     <tr key={product.id} className={product.stock <= 0 ? 'out-of-stock' : ''}>
                       <td>{product.barcode}</td>
                       <td>{product.name}</td>
-                      <td>₡{parseFloat(product.price).toLocaleString()}</td>
+                      <td>${parseFloat(product.price).toLocaleString()}</td>
                       <td className={`stock-cell ${product.stock <= 0 ? 'zero-stock' : ''}`}>
                         {product.stock}
                         <div className="stock-actions">
@@ -933,14 +935,8 @@ function App() {
                 handleEditProduct(viewingProduct);
               }}
               onDelete={() => {
-                const shouldDelete = window.confirm(
-                  `¿Estás seguro de que deseas eliminar el producto "${viewingProduct.name}"?`
-                );
-                
-                if (shouldDelete) {
-                  handleCloseDetails();
-                  handleDeleteProduct(viewingProduct.id);
-                }
+                handleCloseDetails();
+                handleDeleteProduct(viewingProduct.id);
               }}
             />
           </div>

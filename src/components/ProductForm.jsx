@@ -191,7 +191,8 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
         description: formData.description,
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
-        category: parseInt(formData.category)
+        category: parseInt(formData.category),
+        sku: ''
       };
       
       console.log('Guardando producto:', productData);
@@ -254,9 +255,9 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
       
       <form onSubmit={handleSubmit}>
         <div className="form-row">
-          <div className="form-group">
+          <div className="input-group">
             <label htmlFor="barcode">Código de Barras*</label>
-            <div className="barcode-input-group">
+            <div className="barcode-group">
               <input
                 type="text"
                 id="barcode"
@@ -275,17 +276,17 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
                   type="button"
                   onClick={handleBarcodeSearch}
                   disabled={isSearching || !formData.barcode.trim()}
-                  className="search-button"
+                  className="barcode-search-btn"
                   title="Buscar información"
                 >
                   <FaSearch />
                 </button>
               )}
             </div>
-            {formErrors.barcode && <div className="error-message">{formErrors.barcode}</div>}
+            {formErrors.barcode && <span className="form-error">{formErrors.barcode}</span>}
           </div>
           
-          <div className="form-group">
+          <div className="input-group">
             <label htmlFor="name">Nombre*</label>
             <input
               type="text"
@@ -298,42 +299,47 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
               disabled={isSubmitting}
               className={formErrors.name ? 'input-error' : ''}
             />
-            {formErrors.name && <div className="error-message">{formErrors.name}</div>}
+            {formErrors.name && <span className="form-error">{formErrors.name}</span>}
           </div>
         </div>
         
-        <div className="form-group">
+        <div className="input-group full-width">
           <label htmlFor="description">Descripción</label>
-          <textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleDescriptionChange}
-            placeholder="Descripción opcional del producto"
-            rows="3"
-            disabled={isSubmitting}
-            ref={descriptionRef}
-          ></textarea>
+          <div className="description-container">
+            <textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleDescriptionChange}
+              placeholder="Descripción opcional del producto"
+              rows="3"
+              disabled={isSubmitting}
+              ref={descriptionRef}
+            ></textarea>
+          </div>
         </div>
         
         <div className="form-row">
-          <div className="form-group">
+          <div className="input-group">
             <label htmlFor="price">Precio*</label>
-            <input
-              type="text"
-              id="price"
-              name="price"
-              value={formData.price}
-              onChange={handleChange}
-              required
-              placeholder="Ej. 1000"
-              disabled={isSubmitting}
-              className={formErrors.price ? 'input-error' : ''}
-            />
-            {formErrors.price && <div className="error-message">{formErrors.price}</div>}
+            <div className="price-input-group">
+              <span>$</span>
+              <input
+                type="text"
+                id="price"
+                name="price"
+                value={formData.price}
+                onChange={handleChange}
+                required
+                placeholder="Ej. 1000"
+                disabled={isSubmitting}
+                className={formErrors.price ? 'input-error' : ''}
+              />
+            </div>
+            {formErrors.price && <span className="form-error">{formErrors.price}</span>}
           </div>
           
-          <div className="form-group">
+          <div className="input-group">
             <label htmlFor="stock">Cantidad*</label>
             <input
               type="text"
@@ -346,10 +352,10 @@ const ProductForm = ({ product, categories, onSave, onCancel }) => {
               disabled={isSubmitting}
               className={formErrors.stock ? 'input-error' : ''}
             />
-            {formErrors.stock && <div className="error-message">{formErrors.stock}</div>}
+            {formErrors.stock && <span className="form-error">{formErrors.stock}</span>}
           </div>
           
-          <div className="form-group">
+          <div className="input-group">
             <label htmlFor="category">Categoría</label>
             <select
               id="category"

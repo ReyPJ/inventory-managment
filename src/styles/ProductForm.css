@@ -14,20 +14,20 @@
 .product-form-container {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
   align-items: center;
   padding: 0;
   width: 100%;
   height: 100vh;
   max-height: 100vh;
-  overflow-y: hidden;
-  background-color: var(--dark-bg);
+  overflow-y: auto;
+  background-color: rgba(0, 0, 0, 0.85);
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 1000;
+  backdrop-filter: blur(5px);
 }
 
 .product-form-header {
@@ -66,10 +66,10 @@
   background-color: var(--card-bg);
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
-  padding: 3rem;
-  margin: auto;
+  padding: 2rem;
+  margin: 2rem auto;
   max-width: 850px;
-  width: 100%;
+  width: calc(100% - 4rem);
   max-height: calc(100vh - 4rem);
   overflow-y: auto;
 }
@@ -78,6 +78,9 @@
   color: var(--primary-color);
   margin-bottom: 20px;
   text-align: center;
+  font-size: 1.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 1rem;
 }
 
 .product-form h3 {
@@ -107,6 +110,7 @@
   margin-bottom: 0.75rem;
   font-weight: 500;
   color: var(--light-text);
+  font-size: 0.95rem;
 }
 
 .input-group input,
@@ -117,7 +121,7 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--border-radius);
   font-size: 1rem;
-  background-color: var(--dark-bg);
+  background-color: rgba(0, 0, 0, 0.2);
   color: var(--light-text);
   transition: var(--transition);
 }
@@ -144,17 +148,19 @@
   color: white;
   border: none;
   border-radius: var(--border-radius);
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: var(--transition);
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .barcode-search-btn:hover {
   background-color: var(--primary-dark);
+  transform: translateY(-2px);
 }
 
 .barcode-search-btn:disabled {
@@ -173,6 +179,7 @@
   left: 10px;
   color: var(--light-text);
   opacity: 0.7;
+  content: "$";
 }
 
 .price-input-group input {
@@ -188,8 +195,9 @@
   min-height: 150px;
   resize: vertical;
   padding: 1rem;
-  background-color: var(--dark-bg);
+  background-color: rgba(0, 0, 0, 0.2);
   color: var(--light-text);
+  line-height: 1.5;
 }
 
 .character-counter {
@@ -206,21 +214,22 @@
 }
 
 .character-counter.warning {
-  color: var(--warning-color);
+  color: #f39c12;
   opacity: 1;
-  background-color: rgba(255, 193, 7, 0.2);
+  background-color: rgba(243, 156, 18, 0.2);
 }
 
 .character-counter.danger {
   color: var(--danger-color);
   opacity: 1;
-  background-color: rgba(220, 53, 69, 0.2);
+  background-color: rgba(231, 76, 60, 0.2);
 }
 
 .form-error {
   color: var(--danger-color);
-  font-size: 12px;
+  font-size: 0.8rem;
   margin-top: 4px;
+  display: block;
 }
 
 .form-actions {
@@ -243,12 +252,14 @@
   font-size: 1rem;
   cursor: pointer;
   transition: var(--transition);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .save-button:hover,
 .confirm-button:hover {
   background-color: #27ae60;
   transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
 }
 
 .cancel-button,
