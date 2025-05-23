@@ -1,4 +1,3 @@
-"use strict";
 const { contextBridge, ipcRenderer } = typeof require !== "undefined" ? require("electron") : window.electron;
 const log = (msg, ...args) => {
   console.log(`[Preload] ${msg}`, ...args);
@@ -96,3 +95,4 @@ try {
   console.error("[Preload] Error al inicializar:", error);
 }
 //# sourceMappingURL=preload.js.map
+reload.js.map
