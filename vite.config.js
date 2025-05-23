@@ -19,7 +19,7 @@ export default defineConfig({
           build: {
             outDir: "dist-electron",
             rollupOptions: {
-              external: ["electron", "sqlite3", "sequelize", "pg", "pg-hstore"],
+              external: ["electron"],
             },
           },
         },

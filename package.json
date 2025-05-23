@@ -1,7 +1,7 @@
 {
   "name": "inventory-managment",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.6.1",
   "type": "module",
   "main": "dist-electron/main.js",
   "description": "Sistema de gestión de inventario sin conexión",
@@ -47,10 +47,6 @@
     },
     "extraResources": [
       {
-        "from": "database.sqlite",
-        "to": "database.sqlite"
-      },
-      {
         "from": "electron/preload-simple.js",
         "to": "app.asar.unpacked/dist-electron/preload-simple.js"
       }
@@ -60,15 +56,10 @@
     }
   },
   "dependencies": {
-    "better-sqlite3": "^11.9.1",
-    "pg": "^8.11.3",
-    "pg-hstore": "^2.3.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-icons": "^5.5.0",
-    "react-toastify": "^11.0.5",
-    "sequelize": "^6.37.7",
-    "sqlite3": "^5.1.7"
+    "react-toastify": "^11.0.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",

@@ -44,6 +44,10 @@ function App() {
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [removeQuantity, setRemoveQuantity] = useState(1);
   const [authenticated, setAuthenticated] = useState(false);
+  const [sortConfig, setSortConfig] = useState({
+    key: 'createdAt',
+    direction: 'desc'
+  });
   const barcodeInputRef = useRef(null);
   const dropdownRef = useRef(null);
   const [hasShownWelcome, setHasShownWelcome] = useState(false);
@@ -634,6 +638,51 @@ function App() {
     toast.info('Has cerrado sesión correctamente');
   };
 
+  // Función para ordenar los productos
+  const getSortedProducts = () => {
+    let sortedProducts = [...products];
+    
+    if (sortConfig.key) {
+      sortedProducts.sort((a, b) => {
+        if (sortConfig.key === 'name') {
+          return sortConfig.direction === 'asc' 
+            ? a.name.localeCompare(b.name)
+            : b.name.localeCompare(a.name);
+        }
+        
+        if (sortConfig.key === 'price') {
+          return sortConfig.direction === 'asc'
+            ? parseFloat(a.price) - parseFloat(b.price)
+            : parseFloat(b.price) - parseFloat(a.price);
+        }
+        
+        if (sortConfig.key === 'stock') {
+          return sortConfig.direction === 'asc'
+            ? a.stock - b.stock
+            : b.stock - a.stock;
+        }
+        
+        if (sortConfig.key === 'createdAt') {
+          return sortConfig.direction === 'asc'
+            ? new Date(a.createdAt) - new Date(b.createdAt)
+            : new Date(b.createdAt) - new Date(a.createdAt);
+        }
+        
+        return 0;
+      });
+    }
+    
+    return sortedProducts;
+  };
+
+  // Función para manejar el cambio de ordenamiento
+  const handleSort = (key) => {
+    setSortConfig(prevConfig => ({
+      key,
+      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
   // Si no está autenticado, mostrar pantalla de login
   if (!authenticated) {
     return (
@@ -653,6 +702,7 @@ function App() {
           <h1>Sistema de Inventario</h1>
           <span className="user-info">
             Usuario: {getCurrentUser()}
+            Version: 1.6.1 - Fadua's Edition
           </span>
         </div>
         <div className="header-right">
@@ -833,15 +883,21 @@ function App() {
               <thead>
                 <tr>
                   <th>Código</th>
-                  <th>Nombre</th>
-                  <th>Precio</th>
-                  <th>Stock</th>
+                  <th onClick={() => handleSort('name')} className="sortable">
+                    Nombre {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th onClick={() => handleSort('price')} className="sortable">
+                    Precio {sortConfig.key === 'price' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th onClick={() => handleSort('stock')} className="sortable">
+                    Stock {sortConfig.key === 'stock' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </th>
                   <th>Categoría</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {products.map((product) => {
+                {getSortedProducts().map((product) => {
                   // Encontrar el nombre de la categoría
                   const categoryName = 
                     categories.find(c => c.id === product.category)?.name || 

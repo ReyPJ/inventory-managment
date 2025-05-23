@@ -861,3 +861,26 @@ body {
     padding: 1rem;
   }
 }
+
+/* Estilos para encabezados ordenables */
+.products-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding-right: 1.5rem;
+}
+
+.products-table th.sortable:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.products-table th.sortable::after {
+  content: '↕';
+  position: absolute;
+  right: 0.5rem;
+  opacity: 0.5;
+}
+
+.products-table th.sortable:hover::after {
+  opacity: 1;
+}
