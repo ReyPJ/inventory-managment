@@ -35,6 +35,11 @@ function InventoryStats({ products = [], categories = [] }) {
     return total + (price * stock);
   }, 0);
 
+  const calculateTotalProductsOnStock = products.reduce((total, product) => {
+    const stock = parseInt(product.stock) || 0;
+    return total + stock;
+  }, 0);
+
   // Encuentra el producto más caro
   const mostExpensiveProduct = products.reduce((mostExpensive, current) => {
     const currentPrice = parseFloat(current.price) || 0;
@@ -85,6 +90,11 @@ function InventoryStats({ products = [], categories = [] }) {
         <div className="stat-card product-count">
           <h3>Total de Productos</h3>
           <div className="stat-value">{products.length}</div>
+          <div className="stat-description">Número total de productos diferentes en inventario</div>
+        </div>
+        <div className="stat-card product-count">
+          <h3>Total de Productos en Stock</h3>
+          <div className="stat-value">{calculateTotalProductsOnStock}</div>
           <div className="stat-description">Número total de productos diferentes en inventario</div>
         </div>
         

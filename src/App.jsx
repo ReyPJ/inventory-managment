@@ -48,6 +48,7 @@ function App() {
     key: 'createdAt',
     direction: 'desc'
   });
+  const [selectedLetter, setSelectedLetter] = useState('all');
   const barcodeInputRef = useRef(null);
   const dropdownRef = useRef(null);
   const [hasShownWelcome, setHasShownWelcome] = useState(false);
@@ -121,7 +122,7 @@ function App() {
       setLoading(false);
     }
   };
-  
+
   // Filtrar por categoría
   useEffect(() => {
     const filterProductsByCategory = async () => {
@@ -638,9 +639,16 @@ function App() {
     toast.info('Has cerrado sesión correctamente');
   };
 
-  // Función para ordenar los productos
+  // Función para ordenar y filtrar los productos
   const getSortedProducts = () => {
     let sortedProducts = [...products];
+    
+    // Filtrar por letra inicial si se ha seleccionado una
+    if (selectedLetter !== 'all') {
+      sortedProducts = sortedProducts.filter(product => 
+        product.name.toLowerCase().startsWith(selectedLetter.toLowerCase())
+      );
+    }
     
     if (sortConfig.key) {
       sortedProducts.sort((a, b) => {
@@ -702,7 +710,8 @@ function App() {
           <h1>Sistema de Inventario</h1>
           <span className="user-info">
             Usuario: {getCurrentUser()}
-            Version: 1.6.1 - Fadua's Edition
+            Version: 1.6.2 -
+            Fadua's Edition
           </span>
         </div>
         <div className="header-right">
@@ -856,6 +865,28 @@ function App() {
               </option>
             ))}
           </select>
+        </div>
+        
+        {/* Filtrado alfabético */}
+        <div className="alphabet-filter">
+          <label>Filtrar por inicial:</label>
+          <div className="alphabet-buttons">
+            <button 
+              className={selectedLetter === 'all' ? 'active' : ''}
+              onClick={() => setSelectedLetter('all')}
+            >
+              Todas
+            </button>
+            {Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ').map(letter => (
+              <button
+                key={letter}
+                className={selectedLetter === letter ? 'active' : ''}
+                onClick={() => setSelectedLetter(letter)}
+              >
+                {letter}
+              </button>
+            ))}
+          </div>
         </div>
         
         {/* Tabla de productos */}

@@ -1,18 +1,6 @@
-// Función para verificar la conexión a internet
-export const checkInternetConnection = async () => {
-  try {
-    // Intenta hacer una petición a Google para verificar la conexión
-    await fetch("https://www.google.com", {
-      method: "HEAD",
-      mode: "no-cors", // No necesitamos leer la respuesta
-      cache: "no-store", // No usar caché
-      timeout: 2000, // Timeout de 2 segundos
-    });
-    return true;
-  } catch (error) {
-    console.log("No hay conexión a internet:", error);
-    return false;
-  }
+// Función para detectar si estamos ejecutando en Electron
+const isElectronApp = () => {
+  return typeof window !== 'undefined' && window.electronAPI !== undefined;
 };
 
 // Función para limpiar y acortar un título de producto
@@ -105,6 +93,143 @@ const searchGoogleDirect = async (barcode) => {
   }
 };
 
+// Función específica para buscar en UPC Item DB con múltiples estrategias
+const searchUPCItemDB = async (barcode, statusCallback) => {
+  if (statusCallback) statusCallback("Buscando en base de datos UPC...");
+  
+  // Estrategia 1: Intentar acceso directo (funciona en Electron)
+  try {
+    console.log("Intentando acceso directo a UPC Item DB...");
+    const directResponse = await fetch(
+      `https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`,
+      {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Sistema-Inventario/1.6.2',
+        },
+        signal: AbortSignal.timeout(8000)
+      }
+    );
+
+    if (directResponse.ok) {
+      const directData = await directResponse.json();
+      console.log("Respuesta directa de UPC Item DB:", directData);
+
+      if (directData && directData.items && directData.items.length > 0) {
+        const item = directData.items[0];
+        const cleanName = cleanProductTitle(item.title, barcode);
+        const shortDesc = item.description
+          ? item.description.substring(0, 500) + (item.description.length > 500 ? "..." : "")
+          : "";
+        const price = item.lowest_recorded_price || item.highest_recorded_price || "Precio no encontrado";
+
+        return {
+          name: cleanName,
+          description: shortDesc,
+          barcode: barcode,
+          price: price,
+          imageUrl: item.images && item.images.length > 0 ? item.images[0] : null,
+        };
+      }
+    }
+  } catch (directError) {
+    console.log("Acceso directo falló, intentando con proxies:", directError.message);
+  }
+
+  // Estrategia 2: Usar proxies como fallback
+  const proxies = [
+    // Proxy principal
+    `https://api.allorigins.win/get?url=${encodeURIComponent(
+      `https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`
+    )}`,
+    // Proxy alternativo 1 - CORS Anywhere
+    `https://cors-anywhere.herokuapp.com/https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`,
+    // Proxy alternativo 2 - CodeTabs
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(
+      `https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`
+    )}`,
+    // Proxy alternativo 3 - ThingProxy
+    `https://thingproxy.freeboard.io/fetch/https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`,
+    // Proxy alternativo 4 - JSONProxy
+    `https://jsonp.afeld.me/?url=${encodeURIComponent(
+      `https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`
+    )}`,
+  ];
+
+  for (let i = 0; i < proxies.length; i++) {
+    try {
+      console.log(`Intentando proxy ${i + 1} para UPC Item DB...`);
+      
+      const response = await fetch(proxies[i], {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(6000)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log(`Respuesta de UPC Item DB (proxy ${i + 1}):`, data);
+
+      let result;
+      
+      // Manejar diferentes formatos de respuesta según el proxy
+      if (data && data.contents) {
+        // Formato de allorigins.win
+        try {
+          result = JSON.parse(data.contents);
+        } catch (parseError) {
+          console.log(`Error parseando contenido del proxy ${i + 1}:`, parseError);
+          continue;
+        }
+      } else if (data && (data.items || data.code)) {
+        // Formato directo de la API
+        result = data;
+      } else {
+        // Intentar parsear como string si es necesario
+        try {
+          result = typeof data === 'string' ? JSON.parse(data) : data;
+        } catch (parseError) {
+          console.log(`Error parseando respuesta del proxy ${i + 1}:`, parseError);
+          continue;
+        }
+      }
+
+      if (result && result.items && result.items.length > 0) {
+        const item = result.items[0];
+        const cleanName = cleanProductTitle(item.title, barcode);
+        const shortDesc = item.description
+          ? item.description.substring(0, 500) + (item.description.length > 500 ? "..." : "")
+          : "";
+        const price = item.lowest_recorded_price || item.highest_recorded_price || "Precio no encontrado";
+
+        const upcResult = {
+          name: cleanName,
+          description: shortDesc,
+          barcode: barcode,
+          price: price,
+          imageUrl: item.images && item.images.length > 0 ? item.images[0] : null,
+        };
+        
+        console.log(`Producto UPC encontrado con proxy ${i + 1}:`, upcResult);
+        return upcResult;
+      }
+    } catch (proxyError) {
+      console.log(`Error con proxy ${i + 1}:`, proxyError.message);
+      continue;
+    }
+  }
+
+  console.log("Todos los métodos para UPC Item DB fallaron");
+  return null;
+};
+
 // Función para buscar un producto por código de barras
 export const searchProductByBarcode = async (barcode, statusCallback) => {
   try {
@@ -186,52 +311,14 @@ export const searchProductByBarcode = async (barcode, statusCallback) => {
     }
 
     if (!productFound) {
-      // Intentamos UPC Item DB
+      // Intentamos UPC Item DB usando la función optimizada
       try {
-        if (statusCallback) statusCallback("Buscando en base de datos UPC...");
-        // Usamos allorigins.win como proxy para evitar CORS
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(
-          `https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`
-        )}`;
-
-        const response = await fetch(proxyUrl);
-        const data = await response.json();
-
-        if (data && data.contents) {
-          const result = JSON.parse(data.contents);
-
-          if (result.items && result.items.length > 0) {
-            const item = result.items[0];
-
-            // Limpiar el título
-            const cleanName = cleanProductTitle(item.title, barcode);
-
-            // Acortar descripción si existe
-            const shortDesc = item.description
-              ? item.description.substring(0, 500) +
-                (item.description.length > 500 ? "..." : "")
-              : "";
-
-            // Obtener precio si existe
-            const price =
-              item.lowest_recorded_price ||
-              item.highest_recorded_price ||
-              "Precio no encontrado";
-
-            productFound = {
-              name: cleanName,
-              description: shortDesc,
-              barcode: barcode,
-              price: price,
-              imageUrl:
-                item.images && item.images.length > 0 ? item.images[0] : null,
-            };
-            console.log("Producto UPC encontrado:", productFound);
-            return productFound;
-          }
+        const upcResult = await searchUPCItemDB(barcode, statusCallback);
+        if (upcResult) {
+          return upcResult;
         }
       } catch (upcError) {
-        console.log("Error en proxy para UPC API:", upcError);
+        console.log("Error general en UPC Item DB:", upcError);
       }
     }
 
@@ -269,5 +356,40 @@ export const searchProductByBarcode = async (barcode, statusCallback) => {
       imageUrl: null,
       searchFailed: true,
     };
+  }
+};
+
+// Función para verificar la conexión a internet
+export const checkInternetConnection = async () => {
+  try {
+    // En Electron, podemos usar múltiples endpoints para verificar conectividad
+    const testUrls = [
+      "https://www.google.com",
+      "https://api.upcitemdb.com/prod/trial/status",
+      "https://world.openfoodfacts.org/api/v0/status",
+      "https://httpbin.org/status/200"
+    ];
+
+    // Intentar con el primer endpoint disponible
+    for (const url of testUrls) {
+      try {
+        await fetch(url, {
+          method: "HEAD",
+          mode: isElectronApp() ? "cors" : "no-cors", // En Electron podemos usar CORS
+          cache: "no-store",
+          signal: AbortSignal.timeout(3000), // Timeout de 3 segundos
+        });
+        console.log(`Conexión verificada con: ${url}`);
+        return true;
+      } catch (error) {
+        console.log(`Fallo verificación con ${url}:`, error.message);
+        continue;
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.log("No hay conexión a internet:", error);
+    return false;
   }
 };

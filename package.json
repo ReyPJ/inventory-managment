@@ -1,7 +1,7 @@
 {
   "name": "inventory-managment",
   "private": true,
-  "version": "1.6.1",
+  "version": "1.6.2",
   "type": "module",
   "main": "dist-electron/main.js",
   "description": "Sistema de gestión de inventario sin conexión",
@@ -21,7 +21,7 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {
-    "appId": "com.tuapp.inventario",
+    "appId": "com.fauda.inventario",
     "productName": "Sistema de Inventario",
     "files": [
       "dist/**/*",
