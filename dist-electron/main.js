@@ -1,116 +1,93 @@
-import { app, ipcMain, BrowserWindow } from "electron";
-import path from "path";
-import { fileURLToPath } from "url";
-import process from "process";
-import fs from "fs";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const isPackaged = app.isPackaged;
-const isProd = isPackaged || process.env.NODE_ENV === "production";
-console.log("¿Aplicación empaquetada?:", isPackaged);
-console.log("¿Modo producción?:", isProd);
-console.log("Ruta de __dirname:", __dirname);
-const distPath = isProd ? path.join(__dirname, "../dist") : path.join(__dirname, "../dist/");
-console.log("Ruta de distPath:", distPath);
-console.log("Esta ruta existe:", fs.existsSync(distPath));
-let mainWindow;
-function createWindow() {
-  let preloadPath;
-  if (isProd) {
-    preloadPath = path.join(__dirname, "preload-simple.js");
-    if (!fs.existsSync(preloadPath)) {
-      const alternativePaths = [
-        path.join(__dirname, "../dist-electron/preload-simple.js"),
-        path.join(process.resourcesPath, "preload-simple.js"),
-        path.join(app.getAppPath(), "electron/preload-simple.js")
+import { app as d, ipcMain as n, BrowserWindow as m } from "electron";
+import t from "path";
+import { fileURLToPath as f } from "url";
+import i from "process";
+import s from "fs";
+const y = f(import.meta.url), c = t.dirname(y), g = d.isPackaged, u = g || i.env.NODE_ENV === "production";
+console.log("¿Aplicación empaquetada?:", g);
+console.log("¿Modo producción?:", u);
+console.log("Ruta de __dirname:", c);
+const p = u ? t.join(c, "../dist") : t.join(c, "../dist/");
+console.log("Ruta de distPath:", p);
+console.log("Esta ruta existe:", s.existsSync(p));
+let a;
+function h() {
+  let r;
+  if (u) {
+    if (r = t.join(c, "preload-simple.js"), !s.existsSync(r)) {
+      const o = [
+        t.join(c, "../dist-electron/preload-simple.js"),
+        t.join(i.resourcesPath, "preload-simple.js"),
+        t.join(d.getAppPath(), "electron/preload-simple.js")
       ];
-      for (const altPath of alternativePaths) {
+      for (const e of o)
         try {
-          if (fs.existsSync(altPath)) {
-            preloadPath = altPath;
-            console.log("Preload encontrado en:", preloadPath);
+          if (s.existsSync(e)) {
+            r = e, console.log("Preload encontrado en:", r);
             break;
           }
-        } catch (err) {
-          console.error(`Error al verificar ${altPath}:`, err);
+        } catch (l) {
+          console.error(`Error al verificar ${e}:`, l);
         }
-      }
     }
-  } else {
-    preloadPath = path.join(__dirname, "preload.js");
-  }
-  console.log("Usando preload desde:", preloadPath);
-  mainWindow = new BrowserWindow({
+  } else
+    r = t.join(c, "preload.js");
+  if (console.log("Usando preload desde:", r), a = new m({
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: preloadPath,
-      nodeIntegration: true,
+      preload: r,
+      nodeIntegration: !0,
       // Desactivado para seguridad
-      contextIsolation: true,
+      contextIsolation: !0,
       // Importante para prevenir ataques de "prototype pollution"
-      enableRemoteModule: false,
+      enableRemoteModule: !1,
       // Desactivado por seguridad
-      sandbox: false,
+      sandbox: !1,
       // Necesario para que el preload funcione correctamente
-      devTools: !isProd
+      devTools: !u
       // Habilitar DevTools para depuración
     },
     // Configuración adicional para ventana de producción
-    show: false,
+    show: !1,
     // No mostrar hasta que esté lista
     minWidth: 1024,
     minHeight: 768,
     title: "Sistema de Inventario",
-    autoHideMenuBar: isProd,
+    autoHideMenuBar: u,
     // Ocultar barra de menú en producción
-    menuBarVisible: !isProd
+    menuBarVisible: !u
     // No mostrar el menú en producción
-  });
-  mainWindow.webContents.on("before-input-event", (event, input) => {
-    if (input.control && input.shift && input.key.toLowerCase() === "i") {
-      console.log("Abriendo DevTools");
-      mainWindow.webContents.openDevTools();
-      event.preventDefault();
-    }
-  });
-  mainWindow.once("ready-to-show", () => {
-    mainWindow.show();
-  });
-  if (!isProd) {
-    mainWindow.webContents.openDevTools({ mode: "right" });
-    mainWindow.loadURL("http://localhost:5173");
-  } else {
-    let indexPath;
+  }), a.webContents.on("before-input-event", (o, e) => {
+    e.control && e.shift && e.key.toLowerCase() === "i" && (console.log("Abriendo DevTools"), a.webContents.openDevTools(), o.preventDefault());
+  }), a.once("ready-to-show", () => {
+    a.show();
+  }), !u)
+    a.webContents.openDevTools({ mode: "right" }), a.loadURL("http://localhost:5173");
+  else {
+    let o;
     (async () => {
       try {
-        indexPath = path.join(distPath, "index.html");
-        console.log("Intentando cargar desde:", indexPath);
-        if (!fs.existsSync(indexPath)) {
+        if (o = t.join(p, "index.html"), console.log("Intentando cargar desde:", o), !s.existsSync(o)) {
           console.log(
             "No se encontró index.html en la ruta principal, probando alternativas..."
           );
-          const alternativePaths = [
-            path.join(__dirname, "../../dist/index.html"),
-            path.join(__dirname, "../dist/index.html"),
-            path.join(process.cwd(), "dist/index.html"),
-            path.join(app.getAppPath(), "dist/index.html")
+          const e = [
+            t.join(c, "../../dist/index.html"),
+            t.join(c, "../dist/index.html"),
+            t.join(i.cwd(), "dist/index.html"),
+            t.join(d.getAppPath(), "dist/index.html")
           ];
-          console.log("Rutas alternativas a probar:", alternativePaths);
-          for (const altPath of alternativePaths) {
-            console.log(`Comprobando ${altPath}: ${fs.existsSync(altPath)}`);
-            if (fs.existsSync(altPath)) {
-              indexPath = altPath;
-              console.log("Usando ruta alternativa:", indexPath);
+          console.log("Rutas alternativas a probar:", e);
+          for (const l of e)
+            if (console.log(`Comprobando ${l}: ${s.existsSync(l)}`), s.existsSync(l)) {
+              o = l, console.log("Usando ruta alternativa:", o);
               break;
             }
-          }
-          if (!fs.existsSync(indexPath)) {
+          if (!s.existsSync(o)) {
             console.log(
               "No se encontró index.html en ninguna ruta alternativa"
-            );
-            console.log("Usando HTML mínimo de emergencia");
-            mainWindow.loadURL(`data:text/html,
+            ), console.log("Usando HTML mínimo de emergencia"), a.loadURL(`data:text/html,
               <!DOCTYPE html>
               <html>
               <head>
@@ -131,11 +108,11 @@ function createWindow() {
                   <p>No se pudo encontrar el archivo index.html</p>
                   <h2>Información de depuración:</h2>
                   <pre>
-                  distPath: ${distPath}
-                  __dirname: ${__dirname}
-                  cwd: ${process.cwd()}
-                  appPath: ${app.getAppPath()}
-                  resourcesPath: ${process.resourcesPath || "N/A"}
+                  distPath: ${p}
+                  __dirname: ${c}
+                  cwd: ${i.cwd()}
+                  appPath: ${d.getAppPath()}
+                  resourcesPath: ${i.resourcesPath || "N/A"}
                   </pre>
                   <button onclick="require('electron').ipcRenderer.send('restart-app')">
                     Reiniciar Aplicación
@@ -147,216 +124,162 @@ function createWindow() {
             return;
           }
         }
-        console.log("Cargando desde:", indexPath);
-        console.log("El archivo existe:", fs.existsSync(indexPath));
+        console.log("Cargando desde:", o), console.log("El archivo existe:", s.existsSync(o));
         try {
-          if (fs.existsSync(indexPath)) {
-            mainWindow.loadFile(indexPath).catch((err) => {
-              console.error("Error al cargar el archivo:", err);
-              mainWindow.loadURL(
-                "data:text/html,<html><body><h1>Error al cargar la aplicación</h1><p>" + err.message + "</p></body></html>"
-              );
-            });
-          } else {
-            console.error("No se encontró el archivo index.html");
-            mainWindow.loadURL(
-              "data:text/html,<html><body><h1>Error al cargar la aplicación</h1><p>No se encontró el archivo index.html</p></body></html>"
+          s.existsSync(o) ? a.loadFile(o).catch((e) => {
+            console.error("Error al cargar el archivo:", e), a.loadURL(
+              "data:text/html,<html><body><h1>Error al cargar la aplicación</h1><p>" + e.message + "</p></body></html>"
             );
-          }
-        } catch (err) {
-          console.error("Error en loadFile:", err);
-          mainWindow.loadURL(
-            "data:text/html,<html><body><h1>Error al cargar la aplicación</h1><p>" + err.message + "</p></body></html>"
+          }) : (console.error("No se encontró el archivo index.html"), a.loadURL(
+            "data:text/html,<html><body><h1>Error al cargar la aplicación</h1><p>No se encontró el archivo index.html</p></body></html>"
+          ));
+        } catch (e) {
+          console.error("Error en loadFile:", e), a.loadURL(
+            "data:text/html,<html><body><h1>Error al cargar la aplicación</h1><p>" + e.message + "</p></body></html>"
           );
         }
-      } catch (err) {
-        console.error("Error al intentar cargar el HTML:", err);
-        mainWindow.loadURL(
-          "data:text/html,<html><body><h1>Error</h1><p>" + err.message + "</p></body></html>"
+      } catch (e) {
+        console.error("Error al intentar cargar el HTML:", e), a.loadURL(
+          "data:text/html,<html><body><h1>Error</h1><p>" + e.message + "</p></body></html>"
         );
       }
-    })().catch((err) => {
-      console.error("Error al cargar el HTML:", err);
-      mainWindow.loadURL(
-        "data:text/html,<html><body><h1>Error</h1><p>" + err.message + "</p></body></html>"
+    })().catch((e) => {
+      console.error("Error al cargar el HTML:", e), a.loadURL(
+        "data:text/html,<html><body><h1>Error</h1><p>" + e.message + "</p></body></html>"
       );
     });
   }
-  mainWindow.on("closed", function() {
-    mainWindow = null;
+  a.on("closed", function() {
+    a = null;
   });
 }
-function setupIpcHandlers() {
-  console.log("Configurando manejadores IPC...");
-  ipcMain.on("restart-app", () => {
-    console.log("Reiniciando aplicación...");
-    app.relaunch();
-    app.exit(0);
-  });
-  ipcMain.handle("get-all-products", async () => {
+function b() {
+  console.log("Configurando manejadores IPC..."), n.on("restart-app", () => {
+    console.log("Reiniciando aplicación..."), d.relaunch(), d.exit(0);
+  }), n.handle("get-all-products", async () => {
     console.log("Manejador: Obteniendo todos los productos");
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error("Error al obtener productos:", error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (r) {
+      return console.error("Error al obtener productos:", r), { success: !1, error: r.message };
     }
-  });
-  ipcMain.handle("get-all-active-products", async () => {
+  }), n.handle("get-all-active-products", async () => {
     console.log("Manejador: Obteniendo todos los productos activos");
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error("Error al obtener productos activos:", error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (r) {
+      return console.error("Error al obtener productos activos:", r), { success: !1, error: r.message };
     }
-  });
-  ipcMain.handle("get-product-by-id", async (event, id) => {
-    console.log("Manejador: Obteniendo producto por ID", id);
+  }), n.handle("get-product-by-id", async (r, o) => {
+    console.log("Manejador: Obteniendo producto por ID", o);
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error(`Error al obtener producto ${id}:`, error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (e) {
+      return console.error(`Error al obtener producto ${o}:`, e), { success: !1, error: e.message };
     }
-  });
-  ipcMain.handle("get-product-by-barcode", async (event, barcode) => {
-    console.log("Manejador: Obteniendo producto por código de barras", barcode);
+  }), n.handle("get-product-by-barcode", async (r, o) => {
+    console.log("Manejador: Obteniendo producto por código de barras", o);
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error(`Error al obtener producto con código ${barcode}:`, error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (e) {
+      return console.error(`Error al obtener producto con código ${o}:`, e), { success: !1, error: e.message };
     }
-  });
-  ipcMain.handle("create-product", async (event, productData) => {
-    console.log("Manejador: Creando nuevo producto", productData);
+  }), n.handle("create-product", async (r, o) => {
+    console.log("Manejador: Creando nuevo producto", o);
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error("Error al crear producto:", error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (e) {
+      return console.error("Error al crear producto:", e), { success: !1, error: e.message };
     }
-  });
-  ipcMain.handle("update-product", async (event, { id, productData }) => {
-    console.log("Manejador: Actualizando producto", id, productData);
+  }), n.handle("update-product", async (r, { id: o, productData: e }) => {
+    console.log("Manejador: Actualizando producto", o, e);
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error(`Error al actualizar producto ${id}:`, error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (l) {
+      return console.error(`Error al actualizar producto ${o}:`, l), { success: !1, error: l.message };
     }
-  });
-  ipcMain.handle("delete-product", async (event, id) => {
-    console.log("Manejador: Eliminando producto", id);
+  }), n.handle("delete-product", async (r, o) => {
+    console.log("Manejador: Eliminando producto", o);
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error(`Error al eliminar producto ${id}:`, error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (e) {
+      return console.error(`Error al eliminar producto ${o}:`, e), { success: !1, error: e.message };
     }
-  });
-  ipcMain.handle("search-products", async (event, query) => {
-    console.log("Manejador: Buscando productos", query);
+  }), n.handle("search-products", async (r, o) => {
+    console.log("Manejador: Buscando productos", o);
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error("Error al buscar productos:", error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (e) {
+      return console.error("Error al buscar productos:", e), { success: !1, error: e.message };
     }
-  });
-  ipcMain.handle("get-all-categories", async () => {
+  }), n.handle("get-all-categories", async () => {
     console.log("Manejador: Obteniendo todas las categorías");
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error("Error al obtener categorías:", error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (r) {
+      return console.error("Error al obtener categorías:", r), { success: !1, error: r.message };
     }
-  });
-  ipcMain.handle("get-category-by-id", async (event, id) => {
-    console.log("Manejador: Obteniendo categoría por ID", id);
+  }), n.handle("get-category-by-id", async (r, o) => {
+    console.log("Manejador: Obteniendo categoría por ID", o);
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error(`Error al obtener categoría ${id}:`, error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (e) {
+      return console.error(`Error al obtener categoría ${o}:`, e), { success: !1, error: e.message };
     }
-  });
-  ipcMain.handle("create-category", async (event, categoryData) => {
-    console.log("Manejador: Creando nueva categoría", categoryData);
+  }), n.handle("create-category", async (r, o) => {
+    console.log("Manejador: Creando nueva categoría", o);
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error("Error al crear categoría:", error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (e) {
+      return console.error("Error al crear categoría:", e), { success: !1, error: e.message };
     }
-  });
-  ipcMain.handle("update-category", async (event, { id, categoryData }) => {
-    console.log("Manejador: Actualizando categoría", id, categoryData);
+  }), n.handle("update-category", async (r, { id: o, categoryData: e }) => {
+    console.log("Manejador: Actualizando categoría", o, e);
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error(`Error al actualizar categoría ${id}:`, error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (l) {
+      return console.error(`Error al actualizar categoría ${o}:`, l), { success: !1, error: l.message };
     }
-  });
-  ipcMain.handle("delete-category", async (event, id) => {
-    console.log("Manejador: Eliminando categoría", id);
+  }), n.handle("delete-category", async (r, o) => {
+    console.log("Manejador: Eliminando categoría", o);
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error(`Error al eliminar categoría ${id}:`, error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (e) {
+      return console.error(`Error al eliminar categoría ${o}:`, e), { success: !1, error: e.message };
     }
-  });
-  ipcMain.handle("update-products-after-sync", async (event, syncResults) => {
+  }), n.handle("update-products-after-sync", async (r, o) => {
     console.log("Manejador: Actualizando productos después de sincronización");
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error("Error al actualizar productos después de sincronización:", error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (e) {
+      return console.error("Error al actualizar productos después de sincronización:", e), { success: !1, error: e.message };
     }
-  });
-  ipcMain.handle("purge-deleted-products", async () => {
+  }), n.handle("purge-deleted-products", async () => {
     try {
-      console.log("Manejador: Purgando productos eliminados");
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error("Error al purgar productos eliminados:", error);
-      return { success: false, error: error.message };
+      return console.log("Manejador: Purgando productos eliminados"), { success: !0, message: "Operación manejada por el frontend" };
+    } catch (r) {
+      return console.error("Error al purgar productos eliminados:", r), { success: !1, error: r.message };
     }
-  });
-  ipcMain.handle("update-categories-after-sync", async (event, syncResults) => {
+  }), n.handle("update-categories-after-sync", async (r, o) => {
     console.log("Manejador: Actualizando categorías después de sincronización");
     try {
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error("Error al actualizar categorías después de sincronización:", error);
-      return { success: false, error: error.message };
+      return { success: !0, message: "Operación manejada por el frontend" };
+    } catch (e) {
+      return console.error("Error al actualizar categorías después de sincronización:", e), { success: !1, error: e.message };
     }
-  });
-  ipcMain.handle("purge-deleted-categories", async () => {
+  }), n.handle("purge-deleted-categories", async () => {
     try {
-      console.log("Manejador: Purgando categorías eliminadas");
-      return { success: true, message: "Operación manejada por el frontend" };
-    } catch (error) {
-      console.error("Error al purgar categorías eliminadas:", error);
-      return { success: false, error: error.message };
+      return console.log("Manejador: Purgando categorías eliminadas"), { success: !0, message: "Operación manejada por el frontend" };
+    } catch (r) {
+      return console.error("Error al purgar categorías eliminadas:", r), { success: !1, error: r.message };
     }
-  });
-  console.log("Manejadores IPC configurados correctamente");
+  }), console.log("Manejadores IPC configurados correctamente");
 }
-async function setupDatabase() {
+async function j() {
   try {
-    console.log("La base de datos ahora es manejada por la API REST");
-    console.log("No se requiere inicialización local de la base de datos");
-    return true;
-  } catch (error) {
-    console.error("Error en setupDatabase:", error);
-    if (mainWindow) {
-      mainWindow.loadURL(`data:text/html,
+    return console.log("La base de datos ahora es manejada por la API REST"), console.log("No se requiere inicialización local de la base de datos"), !0;
+  } catch (r) {
+    return console.error("Error en setupDatabase:", r), a && a.loadURL(`data:text/html,
         <!DOCTYPE html>
         <html>
         <head>
@@ -374,7 +297,7 @@ async function setupDatabase() {
           <div class="container">
             <h1>Error de Inicialización</h1>
             <p>Ocurrió un error al inicializar la aplicación:</p>
-            <pre>${error.message}</pre>
+            <pre>${r.message}</pre>
             <p>Por favor, reinicie la aplicación. Si el problema persiste, contacte al soporte técnico.</p>
             <button class="btn" onclick="require('electron').ipcRenderer.send('restart-app')">
               Reiniciar Aplicación
@@ -382,63 +305,53 @@ async function setupDatabase() {
           </div>
         </body>
         </html>
-      `);
-    }
-    return false;
+      `), !1;
   }
 }
-app.whenReady().then(async () => {
-  console.log("Aplicación inicializando...");
-  console.log("Ambiente:", process.env.NODE_ENV || "development");
-  console.log("Directorio de la aplicación:", __dirname);
-  console.log("Ruta de dist:", distPath);
+d.whenReady().then(async () => {
+  console.log("Aplicación inicializando..."), console.log("Ambiente:", i.env.NODE_ENV || "development"), console.log("Directorio de la aplicación:", c), console.log("Ruta de dist:", p);
   try {
     console.log(
       "Archivo index.html existe:",
-      fs.existsSync(path.join(distPath, "index.html"))
-    );
-    console.log("Listado de directorios:");
+      s.existsSync(t.join(p, "index.html"))
+    ), console.log("Listado de directorios:");
     try {
-      const rootDir = path.join(__dirname, "../../");
-      console.log("Contenido de directorio raíz:", fs.readdirSync(rootDir));
-      if (fs.existsSync(path.join(__dirname, "../dist"))) {
-        console.log(
-          "Contenido de ../dist:",
-          fs.readdirSync(path.join(__dirname, "../dist"))
-        );
-      }
-    } catch (dirErr) {
-      console.error("Error al listar directorios:", dirErr);
+      const r = t.join(c, "../../");
+      console.log("Contenido de directorio raíz:", s.readdirSync(r)), s.existsSync(t.join(c, "../dist")) && console.log(
+        "Contenido de ../dist:",
+        s.readdirSync(t.join(c, "../dist"))
+      );
+    } catch (r) {
+      console.error("Error al listar directorios:", r);
     }
-  } catch (err) {
-    console.error("Error al verificar archivo:", err);
+  } catch (r) {
+    console.error("Error al verificar archivo:", r);
   }
   try {
-    await setupDatabase();
-  } catch (dbError) {
-    console.error("Error fatal en la base de datos:", dbError);
+    await j();
+  } catch (r) {
+    console.error("Error fatal en la base de datos:", r);
   }
   try {
-    setupIpcHandlers();
-  } catch (ipcError) {
-    console.error("Error al configurar IPC handlers:", ipcError);
+    b();
+  } catch (r) {
+    console.error("Error al configurar IPC handlers:", r);
   }
   try {
-    createWindow();
-    console.log("Ventana creada con éxito");
-  } catch (windowError) {
-    console.error("Error al crear ventana:", windowError);
+    h(), console.log("Ventana creada con éxito");
+  } catch (r) {
+    console.error("Error al crear ventana:", r);
   }
 });
-app.on("window-all-closed", function() {
-  if (process.platform !== "darwin") app.quit();
+d.on("window-all-closed", function() {
+  i.platform !== "darwin" && d.quit();
 });
-app.on("activate", function() {
-  if (mainWindow === null) createWindow();
+d.on("activate", function() {
+  a === null && h();
 });
-process.on("uncaughtException", (error) => {
-  console.error("Error no capturado:", error);
+i.on("uncaughtException", (r) => {
+  console.error("Error no capturado:", r);
 });
-process.on("unhandledRejection", (reason, promise) => {
-  console.error(`Promesa ${promise} rechazada no manejada:`, reason);
+i.on("unhandledRejection", (r, o) => {
+  console.error(`Promesa ${o} rechazada no manejada:`, r);
 });
